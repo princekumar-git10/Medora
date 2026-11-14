@@ -24,7 +24,7 @@ export default function AuthGate({ children }) {
     return <Splash leaving={false} onSkip={() => setForceReady(true)} />;
   }
 
-  if (!user) {
+  if (!user || !profile) {
     return <Login />;
   }
 

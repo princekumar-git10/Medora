@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useContext, useState, useEffect, useRef } from "react";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -22,6 +22,9 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined); // undefined = loading
   const [profile, setProfile] = useState(null);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [authError, setAuthError] = useState("");
+
+  const isAuthActionInProgress = useRef(false);
 
   // Monitor Firebase Auth State
   useEffect(() => {
@@ -38,18 +41,45 @@ export function AuthProvider({ children }) {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       clearTimeout(safetyTimer);
       if (!active) return;
-      setUser(firebaseUser);
+
+      // If an explicit login or signup flow is actively handling the auth transition, let it finish
+      if (isAuthActionInProgress.current) {
+        return;
+      }
+
       if (firebaseUser) {
         setProfileLoading(true);
         try {
           const userProf = await getUserProfile(firebaseUser.uid, firebaseUser);
-          if (active) setProfile(userProf);
+          if (!active) return;
+
+          if (userProf) {
+            setUser(firebaseUser);
+            setProfile(userProf);
+          } else {
+            // User authenticated in Firebase Auth, but NOT registered in Medora!
+            // Sign out to prevent unauthorized access to the application
+            await signOut(auth).catch(() => {});
+            if (active) {
+              setUser(null);
+              setProfile(null);
+              setAuthError(
+                `Account (${firebaseUser.email || "this email"}) is not registered. Please sign up first as a Patient, Doctor, or Hospital.`
+              );
+            }
+          }
         } catch (e) {
           console.warn("Error fetching user profile:", e);
+          if (active) {
+            await signOut(auth).catch(() => {});
+            setUser(null);
+            setProfile(null);
+          }
         } finally {
           if (active) setProfileLoading(false);
         }
       } else {
+        setUser(null);
         setProfile(null);
         setProfileLoading(false);
       }
@@ -75,103 +105,147 @@ export function AuthProvider({ children }) {
 
   // Login with Email & Password (Requires existing registration)
   const login = async (email, password) => {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-    const prof = await getUserProfile(cred.user.uid, cred.user, true);
-    if (!prof) {
-      await signOut(auth);
-      throw new Error(
-        "No registered healthcare account found for this email. Please switch to 'Create Account' to register as a Patient, Doctor, or Hospital first."
-      );
+    isAuthActionInProgress.current = true;
+    setAuthError("");
+    try {
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      const prof = await getUserProfile(cred.user.uid, cred.user);
+      if (!prof) {
+        await signOut(auth);
+        setUser(null);
+        setProfile(null);
+        const notRegMsg = `Account (${email}) is not registered. Please sign up first as a Patient, Doctor, or Hospital.`;
+        setAuthError(notRegMsg);
+        throw new Error(notRegMsg);
+      }
+      setUser(cred.user);
+      setProfile(prof);
+      return { user: cred.user, profile: prof };
+    } catch (err) {
+      if (
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/invalid-credential" ||
+        err.message?.includes("user-not-found")
+      ) {
+        const notRegMsg = "Account is not registered. Please sign up first as a Patient, Doctor, or Hospital.";
+        setAuthError(notRegMsg);
+        throw new Error(notRegMsg);
+      }
+      throw err;
+    } finally {
+      isAuthActionInProgress.current = false;
     }
-    setProfile(prof);
-    return { user: cred.user, profile: prof };
   };
 
   // Signup with Role-Specific Data
   const signup = async (role, data) => {
-    const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
-    const uid = cred.user.uid;
+    isAuthActionInProgress.current = true;
+    setAuthError("");
+    try {
+      const cred = await createUserWithEmailAndPassword(auth, data.email, data.password);
+      const uid = cred.user.uid;
 
-    let createdProfile;
-    if (role === "doctor") {
-      createdProfile = await registerDoctorProfile(uid, data);
-    } else if (role === "hospital") {
-      createdProfile = await registerHospitalProfile(uid, data);
-    } else {
-      createdProfile = await registerPatientProfile(uid, data);
+      let createdProfile;
+      if (role === "doctor") {
+        createdProfile = await registerDoctorProfile(uid, data);
+      } else if (role === "hospital") {
+        createdProfile = await registerHospitalProfile(uid, data);
+      } else {
+        createdProfile = await registerPatientProfile(uid, data);
+      }
+
+      setUser(cred.user);
+      setProfile(createdProfile);
+      return { user: cred.user, profile: createdProfile };
+    } finally {
+      isAuthActionInProgress.current = false;
     }
-
-    setProfile(createdProfile);
-    return { user: cred.user, profile: createdProfile };
   };
 
   // Google Sign-In (Requires that this Google account was already registered)
   const loginWithGoogle = async () => {
-    const cred = await signInWithPopup(auth, googleProvider);
-    const prof = await getUserProfile(cred.user.uid, cred.user, true);
-    if (!prof) {
-      const userEmail = cred.user.email;
-      await signOut(auth);
-      throw new Error(
-        `Your Google account (${userEmail}) is not registered yet. Please switch to 'Create Account', select your portal role (Patient, Doctor, or Hospital), and register first.`
-      );
+    isAuthActionInProgress.current = true;
+    setAuthError("");
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      const prof = await getUserProfile(cred.user.uid, cred.user);
+      if (!prof) {
+        const userEmail = cred.user.email || "";
+        await signOut(auth);
+        setUser(null);
+        setProfile(null);
+        const notRegMsg = `Account (${userEmail}) is not registered. Please sign up first as a Patient, Doctor, or Hospital.`;
+        setAuthError(notRegMsg);
+        throw new Error(notRegMsg);
+      }
+      setUser(cred.user);
+      setProfile(prof);
+      return { user: cred.user, profile: prof };
+    } finally {
+      isAuthActionInProgress.current = false;
     }
-    setProfile(prof);
-    return { user: cred.user, profile: prof };
   };
 
   // Signup with Google (Registers the Google account with the selected role)
   const signupWithGoogle = async (role, extraData = {}) => {
-    const cred = await signInWithPopup(auth, googleProvider);
-    const uid = cred.user.uid;
-    const email = (cred.user.email || "").toLowerCase();
-    const fullName = cred.user.displayName || extraData.fullName || (email.split("@")[0] || "User");
+    isAuthActionInProgress.current = true;
+    setAuthError("");
+    try {
+      const cred = await signInWithPopup(auth, googleProvider);
+      const uid = cred.user.uid;
+      const email = (cred.user.email || "").toLowerCase();
+      const fullName = cred.user.displayName || extraData.fullName || (email.split("@")[0] || "User");
 
-    // Check if already registered
-    const existing = await getUserProfile(uid, cred.user, true);
-    if (existing) {
-      setProfile(existing);
-      return { user: cred.user, profile: existing, alreadyRegistered: true };
+      // Check if already registered
+      const existing = await getUserProfile(uid, cred.user);
+      if (existing) {
+        setUser(cred.user);
+        setProfile(existing);
+        return { user: cred.user, profile: existing, alreadyRegistered: true };
+      }
+
+      let createdProfile;
+      if (role === "doctor") {
+        createdProfile = await registerDoctorProfile(uid, {
+          fullName,
+          email,
+          phone: extraData.phone || "",
+          regNumber: extraData.regNumber || "NMC-GOOGLE-" + Math.floor(1000 + Math.random() * 9000),
+          medicalCouncil: extraData.medicalCouncil || "Delhi Medical Council (DMC)",
+          specialization: extraData.specialization || "General Medicine",
+          affiliation: extraData.affiliation || "Primary Care Clinic",
+          clinicAddress: extraData.clinicAddress || "Clinic Address",
+        });
+      } else if (role === "hospital") {
+        createdProfile = await registerHospitalProfile(uid, {
+          hospitalName: extraData.hospitalName || `${fullName}'s Healthcare Center`,
+          email,
+          phone: extraData.phone || "",
+          regNumber: extraData.regNumber || "HOSP-REG-" + Math.floor(1000 + Math.random() * 9000),
+          hospitalType: extraData.hospitalType || "Multi-Speciality",
+          address: extraData.address || "City Hospital Campus",
+          city: extraData.city || "New Delhi",
+          state: extraData.state || "Delhi",
+          pinCode: extraData.pinCode || "",
+          authorizedRep: fullName,
+        });
+      } else {
+        // Patient
+        createdProfile = await registerPatientProfile(uid, {
+          fullName,
+          email,
+          phone: extraData.phone || "",
+          dob: extraData.dob || "",
+          gender: extraData.gender || "prefer_not_to_say",
+        });
+      }
+
+      setUser(cred.user);
+      setProfile(createdProfile);
+      return { user: cred.user, profile: createdProfile };
+    } finally {
+      isAuthActionInProgress.current = false;
     }
-
-    let createdProfile;
-    if (role === "doctor") {
-      createdProfile = await registerDoctorProfile(uid, {
-        fullName,
-        email,
-        phone: extraData.phone || "",
-        regNumber: extraData.regNumber || "NMC-GOOGLE-" + Math.floor(1000 + Math.random() * 9000),
-        medicalCouncil: extraData.medicalCouncil || "Delhi Medical Council (DMC)",
-        specialization: extraData.specialization || "General Medicine",
-        affiliation: extraData.affiliation || "Primary Care Clinic",
-        clinicAddress: extraData.clinicAddress || "Clinic Address",
-      });
-    } else if (role === "hospital") {
-      createdProfile = await registerHospitalProfile(uid, {
-        hospitalName: extraData.hospitalName || `${fullName}'s Healthcare Center`,
-        email,
-        phone: extraData.phone || "",
-        regNumber: extraData.regNumber || "HOSP-REG-" + Math.floor(1000 + Math.random() * 9000),
-        hospitalType: extraData.hospitalType || "Multi-Speciality",
-        address: extraData.address || "City Hospital Campus",
-        city: extraData.city || "New Delhi",
-        state: extraData.state || "Delhi",
-        pinCode: extraData.pinCode || "",
-        authorizedRep: fullName,
-      });
-    } else {
-      // Patient
-      createdProfile = await registerPatientProfile(uid, {
-        fullName,
-        email,
-        phone: extraData.phone || "",
-        dob: extraData.dob || "",
-        gender: extraData.gender || "prefer_not_to_say",
-      });
-    }
-
-    setProfile(createdProfile);
-    return { user: cred.user, profile: createdProfile };
   };
 
   // Password Reset
@@ -181,6 +255,7 @@ export function AuthProvider({ children }) {
 
   // Logout
   const logout = async () => {
+    setUser(null);
     setProfile(null);
     return signOut(auth);
   };
@@ -204,6 +279,8 @@ export function AuthProvider({ children }) {
     user,
     profile,
     profileLoading,
+    authError,
+    setAuthError,
     role,
     accountStatus,
     isVerified,

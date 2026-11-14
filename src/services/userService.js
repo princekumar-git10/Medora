@@ -64,14 +64,15 @@ export async function findUserProfileByEmail(email) {
 }
 
 /**
- * Fetch or verify user profile from Firestore
- * If requireExisting is true, non-registered users will return null (preventing unauthorized sign-in).
+ * Fetch or verify user profile from Firestore.
+ * Requires that the user has completed explicit registration (as patient, doctor, or hospital).
+ * Unregistered accounts return null to reject unauthorized logins.
  */
-export async function getUserProfile(uid, userAuth = null, requireExisting = false) {
+export async function getUserProfile(uid, userAuth = null) {
   if (!uid || !db) return null;
 
   try {
-    // 1. Direct UID check with resilient timeout
+    // 1. Direct UID check in Firestore
     const userRef = doc(db, USERS_COL, uid);
     const snap = await withTimeout(getDoc(userRef), 2000, null);
 
@@ -81,28 +82,29 @@ export async function getUserProfile(uid, userAuth = null, requireExisting = fal
 
     const email = (userAuth?.email || auth.currentUser?.email || "").toLowerCase();
 
-    // 2. Check by registered email (e.g. if registered with Google or registered with email/pass first)
+    // 2. Check by registered email (e.g. if user registered with email first or vice-versa)
     if (email) {
       const profileByEmail = await findUserProfileByEmail(email);
       if (profileByEmail) {
-        // Link Google UID with existing registered profile
+        // Link UID with existing registered profile
         await setDoc(userRef, { ...profileByEmail, uid, googleUid: uid, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
         return { ...profileByEmail, uid };
       }
     }
 
-    // 3. If requireExisting is enabled, non-demo and non-admin users must register first
+    // 3. Recognized demo accounts & administrators auto-provision for evaluator testing
     const isDemoOrAdmin = ADMIN_EMAILS.includes(email) || 
       email.startsWith("admin@") || 
       email.includes("dr.sharma") || 
       email.includes("fortis") || 
       email === "rahul.verma@gmail.com";
 
-    if (requireExisting && !isDemoOrAdmin) {
+    if (!isDemoOrAdmin) {
+      // Unregistered real user: DO NOT auto-provision! Return null so login is rejected
       return null;
     }
 
-    // 4. Default provision for demo accounts & administrators
+    // 4. Default provision ONLY for demo accounts & administrators
     let defaultRole = "patient";
     let defaultStatus = "ACTIVE";
 
@@ -123,6 +125,7 @@ export async function getUserProfile(uid, userAuth = null, requireExisting = fal
       fullName: userAuth?.displayName || (email.split("@")[0] || "User"),
       role: defaultRole,
       accountStatus: defaultStatus,
+      isDemo: true,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
@@ -134,18 +137,26 @@ export async function getUserProfile(uid, userAuth = null, requireExisting = fal
     return newProfile;
   } catch (err) {
     console.warn("getUserProfile error:", err);
-    if (requireExisting) return null;
     const email = (userAuth?.email || auth.currentUser?.email || "").toLowerCase();
-    const isAdm = ADMIN_EMAILS.includes(email) || email.startsWith("admin@");
-    const isDoc = email.includes("doctor") || email.startsWith("dr.");
-    const isHosp = email.includes("hospital");
-    return {
-      uid,
-      email,
-      fullName: email.split("@")[0] || "User",
-      role: isAdm ? "admin" : isDoc ? "doctor" : isHosp ? "hospital" : "patient",
-      accountStatus: "ACTIVE",
-    };
+    const isDemoOrAdmin = ADMIN_EMAILS.includes(email) || 
+      email.startsWith("admin@") || 
+      email.includes("dr.sharma") || 
+      email.includes("fortis") || 
+      email === "rahul.verma@gmail.com";
+
+    if (isDemoOrAdmin) {
+      const isAdm = ADMIN_EMAILS.includes(email) || email.startsWith("admin@");
+      const isDoc = email.includes("doctor") || email.startsWith("dr.");
+      const isHosp = email.includes("hospital");
+      return {
+        uid,
+        email,
+        fullName: email.split("@")[0] || "User",
+        role: isAdm ? "admin" : isDoc ? "doctor" : isHosp ? "hospital" : "patient",
+        accountStatus: "ACTIVE",
+      };
+    }
+    return null;
   }
 }
 

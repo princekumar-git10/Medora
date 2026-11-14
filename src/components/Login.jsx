@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useLanguage } from "../context/LanguageContext";
 
 export default function Login() {
   const { t, lang, setLang, languages } = useLanguage();
-  const { login, signup, loginWithGoogle, signupWithGoogle, resetPassword } = useAuth();
+  const { login, signup, loginWithGoogle, signupWithGoogle, resetPassword, authError, setAuthError } = useAuth();
 
   const [mode, setMode] = useState("login"); // "login" | "signup" | "forgot"
   const [selectedRole, setSelectedRole] = useState("patient"); // "patient" | "doctor" | "hospital"
@@ -43,9 +43,35 @@ export default function Login() {
   const [successMsg, setSuccessMsg] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const cleanError = (err) =>
-    err.message.replace("Firebase: ", "").replace(/\(auth\/.*\)\.?/, "").trim() ||
-    t("login.genericError");
+  useEffect(() => {
+    if (authError) {
+      setError(authError);
+    }
+  }, [authError]);
+
+  const cleanError = (err) => {
+    if (typeof err === "string") return err;
+    const msg = err?.message || "";
+    return (
+      msg.replace("Firebase: ", "").replace(/\(auth\/.*\)\.?/, "").trim() ||
+      t("login.genericError")
+    );
+  };
+
+  // Google Login (Requires that this Google account is already registered)
+  const handleGoogleLogin = async () => {
+    setError("");
+    setSuccessMsg("");
+    if (setAuthError) setAuthError("");
+    setLoading(true);
+    try {
+      await loginWithGoogle();
+    } catch (err) {
+      setError(cleanError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Quick 1-Click Demo Login
   const handleQuickDemo = async (demoRole) => {
@@ -560,8 +586,72 @@ export default function Login() {
             </div>
           )}
 
-          {error && <p className="error" role="alert">{error}</p>}
-          {successMsg && <p className="success-banner" style={{ background: "#ecfdf5", color: "#065f46", padding: "10px", borderRadius: "8px", fontSize: "0.84rem", margin: "10px 0" }}>{successMsg}</p>}
+          {error && (
+            <div
+              className="authErrorBox"
+              role="alert"
+              style={{
+                background: "#fef2f2",
+                border: "1.5px solid #fecaca",
+                borderRadius: "10px",
+                padding: "12px 14px",
+                margin: "12px 0",
+                color: "#991b1b",
+                textAlign: "left",
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "flex-start", gap: "10px" }}>
+                <span style={{ fontSize: "1.25rem", lineHeight: 1 }}>⚠️</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: "0.86rem", fontWeight: "600", lineHeight: "1.45" }}>
+                    {error}
+                  </div>
+                  {(error.includes("not registered") || error.includes("sign up") || error.includes("Create Account")) && mode !== "signup" && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMode("signup");
+                        setError("");
+                        if (setAuthError) setAuthError("");
+                      }}
+                      style={{
+                        marginTop: "10px",
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "6px",
+                        background: "#0f5c63",
+                        color: "#ffffff",
+                        border: 0,
+                        padding: "7px 14px",
+                        borderRadius: "7px",
+                        fontSize: "0.82rem",
+                        fontWeight: "700",
+                        cursor: "pointer",
+                        boxShadow: "0 2px 4px rgba(15,92,99,0.2)",
+                      }}
+                    >
+                      <span>→ Click here to Register / Sign Up</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          {successMsg && (
+            <p
+              className="success-banner"
+              style={{
+                background: "#ecfdf5",
+                color: "#065f46",
+                padding: "10px",
+                borderRadius: "8px",
+                fontSize: "0.84rem",
+                margin: "10px 0",
+              }}
+            >
+              {successMsg}
+            </p>
+          )}
 
           <button type="submit" className="authPrimary" disabled={loading} style={{ marginTop: "16px" }}>
             {loading
@@ -581,7 +671,7 @@ export default function Login() {
               <button 
                 type="button" 
                 className="authGoogleBtn" 
-                onClick={loginWithGoogle}
+                onClick={handleGoogleLogin}
                 disabled={loading}
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
