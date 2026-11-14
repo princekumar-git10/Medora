@@ -69,25 +69,43 @@ export async function findUserProfileByEmail(email) {
  * Unregistered accounts return null to reject unauthorized logins.
  */
 export async function getUserProfile(uid, userAuth = null) {
-  if (!uid || !db) return null;
+  if (!uid) return null;
 
   try {
     // 1. Direct UID check in Firestore
-    const userRef = doc(db, USERS_COL, uid);
-    const snap = await withTimeout(getDoc(userRef), 2000, null);
+    if (db) {
+      const userRef = doc(db, USERS_COL, uid);
+      const snap = await withTimeout(getDoc(userRef), 2000, null);
 
-    if (snap && snap.exists()) {
-      return { id: snap.id, ...snap.data() };
+      if (snap && snap.exists()) {
+        const data = { id: snap.id, ...snap.data() };
+        try {
+          localStorage.setItem("medora_user_profile_" + uid, JSON.stringify(data));
+        } catch (_) {}
+        return data;
+      }
     }
+
+    // Check local storage cache for registered profiles
+    try {
+      const cached = localStorage.getItem("medora_user_profile_" + uid);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch (_) {}
 
     const email = (userAuth?.email || auth.currentUser?.email || "").toLowerCase();
 
     // 2. Check by registered email (e.g. if user registered with email first or vice-versa)
-    if (email) {
+    if (email && db) {
       const profileByEmail = await findUserProfileByEmail(email);
       if (profileByEmail) {
         // Link UID with existing registered profile
+        const userRef = doc(db, USERS_COL, uid);
         await setDoc(userRef, { ...profileByEmail, uid, googleUid: uid, updatedAt: new Date().toISOString() }, { merge: true }).catch(() => {});
+        try {
+          localStorage.setItem("medora_user_profile_" + uid, JSON.stringify({ ...profileByEmail, uid }));
+        } catch (_) {}
         return { ...profileByEmail, uid };
       }
     }
@@ -203,19 +221,31 @@ export async function registerPatientProfile(uid, patientData) {
     updatedAt: new Date().toISOString(),
   };
 
+  try {
+    localStorage.setItem("medora_user_profile_" + uid, JSON.stringify(profile));
+  } catch (_) {}
+
   if (db) {
-    await setDoc(doc(db, USERS_COL, uid), profile);
-    await setDoc(doc(db, PATIENTS_COL, uid), {
-      userId: uid,
-      fullName: patientData.fullName,
-      email: patientData.email.toLowerCase(),
-      phone: patientData.phone || "",
-      dateOfBirth: patientData.dob || "",
-      gender: patientData.gender || "",
-      allergies: patientData.allergies || [],
-      chronicConditions: patientData.chronicConditions || [],
-      createdAt: new Date().toISOString(),
-    }).catch(() => {});
+    try {
+      await withTimeout(setDoc(doc(db, USERS_COL, uid), profile), 3000, null);
+      await withTimeout(
+        setDoc(doc(db, PATIENTS_COL, uid), {
+          userId: uid,
+          fullName: patientData.fullName,
+          email: patientData.email.toLowerCase(),
+          phone: patientData.phone || "",
+          dateOfBirth: patientData.dob || "",
+          gender: patientData.gender || "",
+          allergies: patientData.allergies || [],
+          chronicConditions: patientData.chronicConditions || [],
+          createdAt: new Date().toISOString(),
+        }),
+        3000,
+        null
+      ).catch(() => {});
+    } catch (err) {
+      console.warn("Firestore patient profile save warning:", err);
+    }
   }
 
   return profile;
@@ -244,13 +274,25 @@ export async function registerDoctorProfile(uid, doctorData) {
     updatedAt: new Date().toISOString(),
   };
 
+  try {
+    localStorage.setItem("medora_user_profile_" + uid, JSON.stringify(profile));
+  } catch (_) {}
+
   if (db) {
-    await setDoc(doc(db, USERS_COL, uid), profile);
-    await setDoc(doc(db, DOCTORS_COL, uid), {
-      userId: uid,
-      doctorId: uid,
-      ...profile,
-    }).catch(() => {});
+    try {
+      await withTimeout(setDoc(doc(db, USERS_COL, uid), profile), 3000, null);
+      await withTimeout(
+        setDoc(doc(db, DOCTORS_COL, uid), {
+          userId: uid,
+          doctorId: uid,
+          ...profile,
+        }),
+        3000,
+        null
+      ).catch(() => {});
+    } catch (err) {
+      console.warn("Firestore doctor profile save warning:", err);
+    }
   }
 
   return profile;
@@ -298,13 +340,25 @@ export async function registerHospitalProfile(uid, hospitalData) {
     updatedAt: new Date().toISOString(),
   };
 
+  try {
+    localStorage.setItem("medora_user_profile_" + uid, JSON.stringify(profile));
+  } catch (_) {}
+
   if (db) {
-    await setDoc(doc(db, USERS_COL, uid), profile);
-    await setDoc(doc(db, HOSPITALS_COL, uid), {
-      hospitalId: uid,
-      userId: uid,
-      ...profile,
-    }).catch(() => {});
+    try {
+      await withTimeout(setDoc(doc(db, USERS_COL, uid), profile), 3000, null);
+      await withTimeout(
+        setDoc(doc(db, HOSPITALS_COL, uid), {
+          hospitalId: uid,
+          userId: uid,
+          ...profile,
+        }),
+        3000,
+        null
+      ).catch(() => {});
+    } catch (err) {
+      console.warn("Firestore hospital profile save warning:", err);
+    }
   }
 
   return profile;

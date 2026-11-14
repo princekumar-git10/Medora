@@ -50,12 +50,55 @@ export default function Login() {
   }, [authError]);
 
   const cleanError = (err) => {
+    if (!err) return "";
     if (typeof err === "string") return err;
-    const msg = err?.message || "";
-    return (
-      msg.replace("Firebase: ", "").replace(/\(auth\/.*\)\.?/, "").trim() ||
-      t("login.genericError")
-    );
+    const code = err.code || "";
+    const msg = err.message || "";
+
+    if (code === "auth/invalid-email" || msg.includes("invalid-email")) {
+      return "Invalid email address format. Please enter a valid email (e.g. rajesh@gmail.com).";
+    }
+    if (code === "auth/email-already-in-use" || msg.includes("email-already-in-use")) {
+      return "This email is already registered. Please click 'Sign In Here' below to log in.";
+    }
+    if (code === "auth/weak-password" || msg.includes("weak-password")) {
+      return "Password is too weak. Please use at least 6 characters.";
+    }
+    if (code === "auth/user-not-found" || msg.includes("user-not-found")) {
+      return "Account is not registered. Please sign up first as a Patient, Doctor, or Hospital.";
+    }
+    if (code === "auth/wrong-password" || msg.includes("wrong-password")) {
+      return "Incorrect password. Please try again or use 'Forgot password'.";
+    }
+    if (code === "auth/invalid-credential" || msg.includes("invalid-credential")) {
+      return "Invalid email or password. Please verify your credentials or register a new account.";
+    }
+    if (code === "auth/operation-not-allowed" || msg.includes("operation-not-allowed")) {
+      return "Email/Password sign-in is not enabled in Firebase Console. Please enable it in Authentication > Sign-in method in Firebase Console.";
+    }
+    if (code === "auth/popup-closed-by-user" || msg.includes("popup-closed-by-user")) {
+      return "Google sign-in popup was closed before completing.";
+    }
+    if (code === "auth/popup-blocked" || msg.includes("popup-blocked")) {
+      return "Google sign-in popup was blocked by your browser. Please allow popups for this site.";
+    }
+    if (code === "auth/network-request-failed" || msg.includes("network-request-failed")) {
+      return "Network error. Please check your internet connection.";
+    }
+    if (code === "auth/too-many-requests" || msg.includes("too-many-requests")) {
+      return "Too many failed attempts. Please wait a few moments before trying again.";
+    }
+
+    const cleaned = msg
+      .replace(/^Firebase:\s*/i, "")
+      .replace(/Error\s*\([^)]*\):?/i, "")
+      .replace(/\(auth\/[^)]*\)/i, "")
+      .trim();
+
+    if (!cleaned || cleaned.toLowerCase() === "error") {
+      return "An error occurred during authentication. Please check your inputs and try again.";
+    }
+    return cleaned;
   };
 
   // Google Login (Requires that this Google account is already registered)
@@ -184,23 +227,28 @@ export default function Login() {
     setLoading(true);
 
     try {
+      const cleanEmail = email.trim().toLowerCase();
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[a-zA-Z0-9-]{2,}$/;
+      if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+        throw new Error("Please enter a valid email address with a domain (e.g. rajesh@gmail.com).");
+      }
+
       if (mode === "forgot") {
-        if (!email.trim()) throw new Error("Please enter your registered email address.");
-        await resetPassword(email);
+        await resetPassword(cleanEmail);
         setSuccessMsg("Password reset link sent to your email. Please check your inbox.");
         setLoading(false);
         return;
       }
 
       if (mode === "login") {
-        await login(email, password);
+        await login(cleanEmail, password);
       } else {
         // Signup validation by role
         if (selectedRole === "doctor") {
           if (!regNumber.trim()) throw new Error("Medical Registration Number is required for doctor accounts.");
           await signup("doctor", {
             fullName,
-            email,
+            email: cleanEmail,
             password,
             phone,
             regNumber,
@@ -215,7 +263,7 @@ export default function Login() {
           if (!regNumber.trim()) throw new Error("Hospital Registration / License Number is required.");
           await signup("hospital", {
             hospitalName,
-            email,
+            email: cleanEmail,
             password,
             phone,
             regNumber,
@@ -233,7 +281,7 @@ export default function Login() {
           // Patient
           await signup("patient", {
             fullName,
-            email,
+            email: cleanEmail,
             password,
             phone,
             dob,
