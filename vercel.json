@@ -1,0 +1,25 @@
+{
+  "buildCommand": "vite build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "rewrites": [
+    { "source": "/api/chat", "destination": "/api/chat" },
+    { "source": "/api/translate", "destination": "/api/translate" },
+    { "source": "/api/ai-referral-assist", "destination": "/api/ai-referral-assist" },
+    { "source": "/api/referral-action", "destination": "/api/referral-action" },
+    { "source": "/api/alternative-matching", "destination": "/api/alternative-matching" },
+    { "source": "/api/redirect-referral", "destination": "/api/redirect-referral" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ],
+  "headers": [
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET,POST,OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
+    }
+  ]
+}
+
