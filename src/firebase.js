@@ -1,18 +1,21 @@
 import { initializeApp } from "firebase/app";
 import { getAuth, GoogleAuthProvider } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { getAnalytics } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyDWLFvy7FJ2HxPO0Y_wQl_9oD6K3y_DF2w",
-  authDomain: "medreport-61f1c.firebaseapp.com",
-  projectId: "medreport-61f1c",
-  storageBucket: "medreport-61f1c.firebasestorage.app",
-  messagingSenderId: "276067926417",
-  appId: "1:276067926417:web:ed52ede3d004686025da30",
-  measurementId: "G-WB67GFYJ5F"
+  apiKey: "AIzaSyD4BQaF68jcrTLUkIFg3Bubfgk3bFmLpFw",
+  authDomain: "medora-55cfd.firebaseapp.com",
+  projectId: "medora-55cfd",
+  storageBucket: "medora-55cfd.firebasestorage.app",
+  messagingSenderId: "1029910166277",
+  appId: "1:1029910166277:web:455f80d7ac346d13c9156c",
+  measurementId: "G-B5S8FHC47N"
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 
@@ -23,3 +26,14 @@ try {
   console.warn("Firestore initialization error:", e);
 }
 export const db = firestoreDb;
+
+let analytics = null;
+if (typeof window !== "undefined") {
+  try {
+    analytics = getAnalytics(app);
+  } catch (e) {
+    console.warn("Analytics initialization error:", e);
+  }
+}
+export { analytics };
+export default app;
