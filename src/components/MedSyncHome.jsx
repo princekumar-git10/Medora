@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLanguage } from "../context/LanguageContext";
 import { processHealthQuery } from "../utils/multilingualBot";
 import { formatMarkdown } from "../utils/formatMarkdown";
@@ -8,6 +8,19 @@ export default function MedSyncHome({ userEmail, onNavigate, results = [] }) {
   const [query, setQuery] = useState("");
   const [answer, setAnswer] = useState(null);
   const [loading, setLoading] = useState(false);
+  const responseRef = useRef(null);
+
+  // Smoothly auto-scroll to the clinical response whenever a query is submitted or answer arrives
+  useEffect(() => {
+    if (answer) {
+      const timer = setTimeout(() => {
+        if (responseRef.current) {
+          responseRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      }, 60);
+      return () => clearTimeout(timer);
+    }
+  }, [answer?.query, answer?.loading, answer?.text]);
 
   // Extract a friendly name from email or default to "Prince"
   const extractName = () => {
@@ -25,6 +38,13 @@ export default function MedSyncHome({ userEmail, onNavigate, results = [] }) {
 
     setLoading(true);
     setAnswer({ query: q, text: "", loading: true });
+
+    // Trigger immediate auto-scroll so the user is guided directly to the response area
+    setTimeout(() => {
+      if (responseRef.current) {
+        responseRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }, 40);
 
     const reportContext = results.map((r) => ({
       name: r.test?.name || r.name,
@@ -49,11 +69,11 @@ export default function MedSyncHome({ userEmail, onNavigate, results = [] }) {
 
       if (!resp.ok) throw new Error("Server error");
       const data = await resp.json();
-      setAnswer({ query: q, text: data.reply || processHealthQuery(q, results, lang), model: data.model });
+      setAnswer({ query: q, text: data.reply || processHealthQuery(q, results, lang), model: data.model, loading: false });
     } catch (e) {
       console.warn("Home search API fallback:", e);
       const fallbackReply = processHealthQuery(q, results, lang);
-      setAnswer({ query: q, text: fallbackReply, isFallback: true });
+      setAnswer({ query: q, text: fallbackReply, isFallback: true, loading: false });
     } finally {
       setLoading(false);
     }
@@ -143,7 +163,12 @@ export default function MedSyncHome({ userEmail, onNavigate, results = [] }) {
             placeholder={t("home.searchPlaceholder")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSearch();
+              }
+            }}
           />
           <div className="search-divider" />
           <button
@@ -184,24 +209,37 @@ export default function MedSyncHome({ userEmail, onNavigate, results = [] }) {
 
       {/* ── Dynamic Inline AI Clinical Response (if query submitted) ── */}
       {answer && (
-        <div className="home-response-card">
+        <div
+          className="home-response-card"
+          ref={responseRef}
+          style={{ scrollMarginTop: "90px" }}
+        >
           <div className="response-header">
             <div className="resp-badge">
-              <span className="resp-dot" />
-              <span>MedSync Clinical Synthesis</span>
+              <span className={`resp-dot ${answer.loading ? "pulsing-dot" : ""}`} />
+              <span>{answer.loading ? "Synthesizing Insights..." : "Medora Clinical Synthesis"}</span>
             </div>
-            <button className="resp-close-btn" onClick={() => setAnswer(null)}>✕</button>
+            <button className="resp-close-btn" onClick={() => setAnswer(null)} title="Close response">✕</button>
           </div>
           <div className="resp-body">
-            {formatMarkdown(answer.text, {
-              lineClass: "resp-line",
-              headingClass: "resp-h3",
-              bulletClass: "resp-bullet",
-              codeBlockClass: "bot-code-block",
-              hrClass: "resp-divider",
-            })}
+            {answer.loading ? (
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", padding: "16px 4px", color: "#0f5c63" }}>
+                <span style={{ fontSize: "1.2rem", animation: "spin 2s linear infinite" }}>✦</span>
+                <span style={{ fontSize: "0.92rem", fontWeight: "600" }}>
+                  Analyzing medical query: &ldquo;{answer.query}&rdquo;...
+                </span>
+              </div>
+            ) : (
+              formatMarkdown(answer.text, {
+                lineClass: "resp-line",
+                headingClass: "resp-h3",
+                bulletClass: "resp-bullet",
+                codeBlockClass: "bot-code-block",
+                hrClass: "resp-divider",
+              })
+            )}
           </div>
-          {results.length === 0 && (
+          {!answer.loading && results.length === 0 && (
             <div className="resp-action-bar">
               <button className="resp-cta-btn" onClick={() => onNavigate("report")}>
                 Upload Report for Personalized Analysis →
