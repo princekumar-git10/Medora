@@ -44,7 +44,7 @@ export default async function handler(req, res) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     return res.status(500).json({
-      error: "OPENROUTER_API_KEY is not configured on the server. Please add it to your environment variables."
+      error: "OPENROUTER_API_KEY is not configured on the server. Please add OPENROUTER_API_KEY to your environment variables."
     });
   }
 

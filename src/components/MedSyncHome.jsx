@@ -67,11 +67,20 @@ export default function MedSyncHome({ userEmail, onNavigate, results = [] }) {
         }),
       });
 
-      if (!resp.ok) throw new Error("Server error");
+      if (!resp.ok) {
+        const errJson = await resp.json().catch(() => ({}));
+        throw new Error(errJson.error || `Server error (${resp.status})`);
+      }
+
       const data = await resp.json();
-      setAnswer({ query: q, text: data.reply || processHealthQuery(q, results, lang), model: data.model, loading: false });
+      if (data.reply) {
+        setAnswer({ query: q, text: data.reply, model: data.model, loading: false });
+      } else {
+        const fallbackReply = processHealthQuery(q, results, lang);
+        setAnswer({ query: q, text: fallbackReply, isFallback: true, loading: false });
+      }
     } catch (e) {
-      console.warn("Home search API fallback:", e);
+      console.warn("Home search API error, falling back to local library:", e);
       const fallbackReply = processHealthQuery(q, results, lang);
       setAnswer({ query: q, text: fallbackReply, isFallback: true, loading: false });
     } finally {
