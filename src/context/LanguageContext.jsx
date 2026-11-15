@@ -18,6 +18,34 @@ export const LANGUAGES = [
 
 const LanguageContext = createContext(null);
 
+function applyGoogleTranslate(newLang) {
+  if (typeof document === "undefined") return;
+  try {
+    const cookieVal = newLang === "en" ? "" : `/en/${newLang}`;
+    document.cookie = `googtrans=${cookieVal}; path=/;`;
+    if (window.location.hostname) {
+      document.cookie = `googtrans=${cookieVal}; path=/; domain=${window.location.hostname};`;
+      document.cookie = `googtrans=${cookieVal}; path=/; domain=.${window.location.hostname};`;
+    }
+
+    const select = document.querySelector(".goog-te-combo");
+    if (select) {
+      select.value = newLang;
+      select.dispatchEvent(new Event("change"));
+    } else {
+      setTimeout(() => {
+        const delayedSelect = document.querySelector(".goog-te-combo");
+        if (delayedSelect) {
+          delayedSelect.value = newLang;
+          delayedSelect.dispatchEvent(new Event("change"));
+        }
+      }, 500);
+    }
+  } catch (e) {
+    console.warn("Auto-translate error:", e);
+  }
+}
+
 export function LanguageProvider({ children }) {
   const { t: i18nT, i18n: i18nInstance } = useTranslation();
 
@@ -30,7 +58,10 @@ export function LanguageProvider({ children }) {
     try {
       localStorage.setItem("medreport_language", newLang);
       document.documentElement.lang = newLang;
-      i18nInstance.changeLanguage(newLang);
+      if (i18nInstance && typeof i18nInstance.changeLanguage === "function") {
+        i18nInstance.changeLanguage(newLang);
+      }
+      applyGoogleTranslate(newLang);
     } catch (e) {
       console.warn("Could not save language to localStorage:", e);
     }
@@ -38,38 +69,50 @@ export function LanguageProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.lang = lang;
-    if (i18nInstance.language !== lang) {
+    if (i18nInstance && i18nInstance.language !== lang && typeof i18nInstance.changeLanguage === "function") {
       i18nInstance.changeLanguage(lang);
     }
+    applyGoogleTranslate(lang);
   }, [lang]);
 
   /**
    * Safe Dot-Notation Translation Lookup with Variable Interpolation
-   * Bridges our existing t("section.key", { param }) calls to i18next
-   * Example: t("report.testsFound", { count: 11 })
+   * 1. Synchronous lookup in active language dictionary
+   * 2. Fallback to English dictionary if not found in active language
+   * 3. Fallback to i18next if available
+   * 4. Variable interpolation: {param}
    */
   const t = (path, params = {}) => {
-    // Try i18next first (it handles fallback to English internally)
-    const result = i18nT(path, params);
-    
-    // If i18next returned the raw key path, try our manual lookup
-    if (result === path) {
-      const keys = path.split(".");
-      let value = keys.reduce((acc, k) => acc?.[k], TRANSLATIONS[lang]);
-      if (value === undefined && lang !== "en") {
-        value = keys.reduce((acc, k) => acc?.[k], TRANSLATIONS.en);
-      }
-      if (value === undefined || typeof value !== "string") {
-        return keys[keys.length - 1] || path;
-      }
-      let res = value;
-      Object.keys(params).forEach((p) => {
-        res = res.replaceAll(`{${p}}`, params[p]);
-      });
-      return res;
+    if (!path || typeof path !== "string") return "";
+    const keys = path.split(".");
+
+    // 1. Direct synchronous lookup in current language dictionary
+    let value = keys.reduce((acc, k) => acc?.[k], TRANSLATIONS[lang]);
+
+    // 2. Fallback to English dictionary if missing in current language
+    if ((value === undefined || typeof value !== "string") && lang !== "en") {
+      value = keys.reduce((acc, k) => acc?.[k], TRANSLATIONS.en);
     }
-    
-    return result;
+
+    // 3. Fallback to i18next if available
+    if (value === undefined || typeof value !== "string") {
+      try {
+        const iVal = i18nT(path, { ...params, lng: lang });
+        if (iVal && iVal !== path && !path.endsWith(`.${iVal}`)) {
+          return iVal;
+        }
+      } catch {}
+      return keys[keys.length - 1] || path;
+    }
+
+    // 4. Interpolate variables e.g. {count}, {name}, {email}
+    let res = value;
+    if (params && typeof params === "object") {
+      for (const [p, v] of Object.entries(params)) {
+        res = res.replaceAll(`{${p}}`, v !== undefined && v !== null ? v : "");
+      }
+    }
+    return res;
   };
 
   /**

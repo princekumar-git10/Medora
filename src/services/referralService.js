@@ -61,6 +61,95 @@ function withTimeout(promise, ms = 2000) {
 // Initial demonstration referrals for testing & demo purposes
 const DEMO_REFERRALS = [
   {
+    id: "REF-RLH-2026-9124",
+    isDemoData: true,
+    sourceNote: "Demonstration Data (Verified Network Transfer)",
+    status: "Accepted",
+    createdAt: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+    doctorId: "dr.arora@careclinic.med",
+    doctorName: "Dr. Sandeep Arora, MS",
+    doctorClinic: "Arora Surgical Care & Clinic, Delhi",
+    priority: "Urgent",
+    patient: {
+      name: "Rahul Verma",
+      patientId: "PID-2026-9124",
+      email: "rahul.verma@gmail.com",
+      age: 38,
+      gender: "Male",
+      contact: "+91 98765 43210",
+      location: "New Delhi",
+      emergencyContact: "Neha Verma (Spouse) - +91 98765 43211",
+      bloodGroup: "B+",
+      insuranceTpa: "HDFC ERGO Cashless Health",
+      policyNumber: "POL-HD-2026-88190"
+    },
+    clinicalRequirements: {
+      specialty: "Laser Proctology",
+      procedure: "Laser Hemorrhoidoplasty (LHP) & Daycare Surgery",
+      diagnosis: "Grade-III Bleeding Internal Hemorrhoids refractory to conservative medical management. Secondary normocytic anemia.",
+      hospitalFacilities: "Daycare Surgical Suite, Post-op Recovery Bay 4B",
+      icuRequired: false,
+      emergencySupportRequired: true,
+      requiredSpecialist: "Senior Colorectal / Laser Proctologist",
+      equipmentRequirements: "1470nm Radial Fiber Diode Laser Unit",
+      additionalClinicalNotes: "Bed pre-reserved in Surgical Ward 4B (Bed #12). NPO scheduled from midnight. Verified cashless admission pass active."
+    },
+    preferences: {
+      preferredLocation: "New Delhi",
+      maxDistance: "15 km",
+      insuranceRequirements: "Cashless TPA / HDFC ERGO"
+    },
+    admissionDetails: {
+      admissionPassId: "PASS-RLH-2026-9124",
+      bedAllocated: "Ward 4B - Bed #12 (Confirmed Hold)",
+      authorizedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+      authorizedBy: "Dr. Arvind Mehta (Chief of Surgery)",
+      triagePriority: "Priority Fast-Track Intake",
+      reportingTime: "Tomorrow, 08:30 AM",
+      intakeDesk: "Apollo Main Emergency Counter #3"
+    },
+    documents: [
+      {
+        id: "doc-rahul-cbc",
+        name: "CBC_Hemogram_Report_Rahul_Verma.pdf",
+        type: "application/pdf",
+        size: 215000,
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 115).toISOString(),
+        category: "Complete Blood Count & Coagulation"
+      },
+      {
+        id: "doc-rahul-pass",
+        name: "Authorized_Admission_Pass_Apollo.pdf",
+        type: "application/pdf",
+        size: 180000,
+        uploadedAt: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+        category: "Digital Hospital Admission Pass"
+      }
+    ],
+    targetHospitalId: "HOSP-RLH-001",
+    targetHospitalName: "Apollo Laser & Multi-Specialty Hospital",
+    timeline: [
+      {
+        status: "Created",
+        timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
+        note: "Urgent laser surgical referral created by Dr. Sandeep Arora",
+        by: "Dr. Sandeep Arora"
+      },
+      {
+        status: "Pending",
+        timestamp: new Date(Date.now() - 1000 * 60 * 110).toISOString(),
+        note: "Dispatched to Apollo Laser & Multi-Specialty Hospital intake desk. Telemetry match score: 98.4%",
+        by: "Medora Real-time Matcher"
+      },
+      {
+        status: "Accepted",
+        timestamp: new Date(Date.now() - 1000 * 60 * 60).toISOString(),
+        note: "Accepted by Dr. Arvind Mehta (Chief of Surgery). Capacity held: 1 Bed in Ward 4B (#12 reserved). Digital Admission Pass issued.",
+        by: "Apollo Admissions Desk"
+      }
+    ]
+  },
+  {
     id: "REF-RLH-2026-7782",
     isDemoData: true,
     sourceNote: "Demonstration Data (Sample Network Demo)",
@@ -406,8 +495,14 @@ export async function getReferrals(doctorId = null) {
       if (!snap.empty) {
         const cloudList = [];
         snap.forEach(d => cloudList.push({ id: d.id, ...d.data() }));
-        saveLocalReferrals(cloudList);
-        list = cloudList;
+        const mergedList = [...cloudList];
+        for (const demo of DEMO_REFERRALS) {
+          if (!mergedList.some(r => r.id === demo.id)) {
+            mergedList.push(demo);
+          }
+        }
+        saveLocalReferrals(mergedList);
+        list = mergedList;
       }
     } catch (e) {
       console.warn("Firestore referrals sync skipped, using local store:", e.message);

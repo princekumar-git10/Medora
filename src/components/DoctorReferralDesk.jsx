@@ -579,9 +579,9 @@ export default function DoctorReferralDesk({
             <span className="live-pulse-dot" />
             <span>Physician Desk · Relief Laser Health</span>
           </div>
-          <h2 className="doc-main-title">Doctor Referral Portal</h2>
+          <h2 className="doc-main-title">{t("doctor.title") || "Doctor Referral Portal"}</h2>
           <p className="doc-main-sub">
-            Generate clinical referrals, specify exact surgical and laser requirements, and match patients with accredited hospital facilities.
+            {t("doctor.subtitle") || "Generate clinical referrals, specify exact surgical and laser requirements, and match patients with accredited hospital facilities."}
           </p>
         </div>
 
@@ -594,7 +594,7 @@ export default function DoctorReferralDesk({
             <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
               <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
             </svg>
-            <span>Referrals Dashboard</span>
+            <span>{t("doctor.dashboard") || "Referrals Dashboard"}</span>
             <span className="tab-counter">{totalCount}</span>
           </button>
 
@@ -609,7 +609,7 @@ export default function DoctorReferralDesk({
               <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
               <path d="M16 3.13a4 4 0 0 1 0 7.75" />
             </svg>
-            <span>My Patients</span>
+            <span>{t("doctor.myPatients") || "My Patients"}</span>
             <span className="tab-counter">{uniquePatients.length}</span>
           </button>
 
@@ -624,7 +624,7 @@ export default function DoctorReferralDesk({
             <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
               <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
             </svg>
-            <span>Create New Referral</span>
+            <span>{t("doctor.createReferral") || "Create New Referral"}</span>
           </button>
 
           <button
@@ -636,7 +636,7 @@ export default function DoctorReferralDesk({
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            <span>Doctor Profile</span>
+            <span>{t("doctor.profile") || "Doctor Profile"}</span>
             <span className={`tab-counter ${accountStatus === "ACTIVE" ? "badge-green" : "badge-amber"}`}>
               {accountStatus === "ACTIVE" ? "✓" : "⏳"}
             </span>

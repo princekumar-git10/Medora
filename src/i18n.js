@@ -31,11 +31,6 @@ i18n
     },
     returnNull: false,
     returnEmptyString: false,
-    parseMissingKeyHandler: (key) => {
-      // Return the last segment of the key as a readable fallback
-      const parts = key.split(".");
-      return parts[parts.length - 1] || key;
-    },
   });
 
 export default i18n;

@@ -40,7 +40,7 @@ export default function PulseNav({ activePage, onNavigate, userEmail, onLogout, 
   // Reusable Ora AI (Home) item placed as the first option in the navigation
   const oraAiNavItem = {
     id: "home",
-    label: "Ora AI",
+    label: t("nav.oraAi") || "Ora AI",
     icon: (
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="nav-svg">
         <path d="M12 2l2.4 4.8 5.3.8-3.8 3.7.9 5.3L12 16.1l-4.8 2.5.9-5.3-3.8-3.7 5.3-.8z" />
@@ -57,19 +57,19 @@ export default function PulseNav({ activePage, onNavigate, userEmail, onLogout, 
       oraAiNavItem,
       {
         id: "patient_dashboard",
-        label: "Patient Dashboard",
+        label: t("nav.patientDashboard") || "Patient Dashboard",
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="nav-svg">
             <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
         ),
-        badge: "Portal",
+        badge: t("nav.badgePortal") || "Portal",
         badgeType: "ok",
       },
       {
         id: "cost",
-        label: "Hospital Costs",
+        label: t("nav.cost") || "Hospital Costs",
         icon: (
           <svg viewBox="0 0 20 20" fill="currentColor" className="nav-svg">
             <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z" />
@@ -84,7 +84,7 @@ export default function PulseNav({ activePage, onNavigate, userEmail, onLogout, 
       oraAiNavItem,
       {
         id: "doctor_dashboard",
-        label: "Doctor Portal",
+        label: t("nav.doctorPortal") || "Doctor Portal",
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="nav-svg">
             <path d="M4.5 12.5l3.5-3.5 4 4 7.5-7.5" />
@@ -92,12 +92,12 @@ export default function PulseNav({ activePage, onNavigate, userEmail, onLogout, 
             <path d="M4 20h16" />
           </svg>
         ),
-        badge: "Verified",
+        badge: t("nav.badgeVerified") || "Verified",
         badgeType: "ok",
       },
       {
         id: "report",
-        label: "Diagnostic AI",
+        label: t("nav.diagnosticAi") || "Diagnostic AI",
         icon: (
           <svg viewBox="0 0 20 20" fill="currentColor" className="nav-svg">
             <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
@@ -112,7 +112,7 @@ export default function PulseNav({ activePage, onNavigate, userEmail, onLogout, 
       oraAiNavItem,
       {
         id: "hospital_dashboard",
-        label: "Hospital Portal",
+        label: t("nav.hospitalPortal") || "Hospital Portal",
         icon: (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" className="nav-svg">
             <path d="M3 21h18M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16" />
@@ -120,7 +120,7 @@ export default function PulseNav({ activePage, onNavigate, userEmail, onLogout, 
             <path d="M10 9h4M12 7v4" />
           </svg>
         ),
-        badge: "Desk",
+        badge: t("nav.badgeDesk") || "Desk",
         badgeType: "ok",
       },
     ];

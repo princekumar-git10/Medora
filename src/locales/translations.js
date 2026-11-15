@@ -1,4 +1,5 @@
 import { ADDITIONAL_TRANSLATIONS, ADDITIONAL_TEST_NAMES } from "./additionalLanguages.js";
+import { PORTAL_TRANSLATIONS } from "./portalTranslations.js";
 
 // Comprehensive multilingual translation dictionaries
 // Languages: English (en), Hindi (hi), Bengali (bn), Tamil (ta), Telugu (te), Marathi (mr), Gujarati (gu), Kannada (kn), Malayalam (ml), Punjabi (pa)
@@ -1922,5 +1923,16 @@ export const TEST_NAME_TRANSLATIONS = {
 // Merge additional Indian languages (gu, kn, ml, pa)
 Object.assign(TRANSLATIONS, ADDITIONAL_TRANSLATIONS);
 Object.assign(TEST_NAME_TRANSLATIONS, ADDITIONAL_TEST_NAMES);
+
+// Deep merge portal, nav, and common role translations across all 10 languages
+for (const [langKey, sections] of Object.entries(PORTAL_TRANSLATIONS)) {
+  if (!TRANSLATIONS[langKey]) TRANSLATIONS[langKey] = {};
+  for (const [sectionKey, keys] of Object.entries(sections)) {
+    TRANSLATIONS[langKey][sectionKey] = {
+      ...(TRANSLATIONS[langKey][sectionKey] || {}),
+      ...keys,
+    };
+  }
+}
 
 

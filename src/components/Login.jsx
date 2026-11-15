@@ -276,31 +276,31 @@ export default function Login() {
             className={`auth-segmented-tab ${mode === "login" ? "active" : ""}`}
             onClick={() => { setMode("login"); setError(""); setSuccessMsg(""); }}
           >
-            <span>Sign In</span>
+            <span>{t("login.signInTab") || "Sign In"}</span>
           </button>
           <button
             type="button"
             className={`auth-segmented-tab ${mode === "signup" ? "active" : ""}`}
             onClick={() => { setMode("signup"); setError(""); setSuccessMsg(""); }}
           >
-            <span>Create Account</span>
+            <span>{t("login.createAccountTab") || "Create Account"}</span>
           </button>
         </div>
 
         {/* Title & Context Subtitle */}
         <h1 style={{ fontSize: "1.45rem", marginBottom: "6px", color: "#0f172a" }}>
           {mode === "forgot"
-            ? "Reset Your Password"
+            ? (t("login.titleForgot") || "Reset Your Password")
             : mode === "signup"
-            ? "Create Your Healthcare Account"
-            : "Sign In to Your Healthcare Portal"}
+            ? (t("login.titleSignUp") || "Create Your Healthcare Account")
+            : (t("login.titleSignIn") || "Sign In to Your Healthcare Portal")}
         </h1>
         <p className="tag" style={{ marginBottom: "20px", color: "#64748b", lineHeight: "1.45" }}>
           {mode === "forgot"
-            ? "Enter your registered email to receive a password reset link."
+            ? (t("login.subForgot") || "Enter your registered email to receive a password reset link.")
             : mode === "signup"
-            ? "Select your account type to access your specialized portal."
-            : "Log in to continue to your reports, clinical referrals, or hospital desk."}
+            ? (t("login.subSignUp") || "Select your account type to access your specialized portal.")
+            : (t("login.subSignIn") || "Log in to continue to your reports, clinical referrals, or hospital desk.")}
         </p>
 
         <form onSubmit={handleSubmit}>
@@ -308,7 +308,7 @@ export default function Login() {
           {mode === "signup" && (
             <div style={{ marginBottom: "18px" }}>
               <label style={{ fontSize: "0.85rem", fontWeight: "700", color: "#0f5c63", display: "block", marginBottom: "8px" }}>
-                Select Your Role / Account Type:
+                {t("login.selectRole") || "Select Your Role / Account Type:"}
               </label>
               <div className="role-selector-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "8px" }}>
                 <button
@@ -317,8 +317,8 @@ export default function Login() {
                   onClick={() => setSelectedRole("patient")}
                 >
                   <span style={{ fontSize: "1.4rem" }}>👤</span>
-                  <strong>Patient</strong>
-                  <small>Lab Reports &amp; Referrals</small>
+                  <strong>{t("login.patient") || "Patient"}</strong>
+                  <small>{t("login.patientDesc") || "Lab Reports & Referrals"}</small>
                 </button>
                 <button
                   type="button"
@@ -326,8 +326,8 @@ export default function Login() {
                   onClick={() => setSelectedRole("doctor")}
                 >
                   <span style={{ fontSize: "1.4rem" }}>🩺</span>
-                  <strong>Doctor</strong>
-                  <small>Clinician Referral Desk</small>
+                  <strong>{t("login.doctor") || "Doctor"}</strong>
+                  <small>{t("login.doctorDesc") || "Clinician Referral Desk"}</small>
                 </button>
                 <button
                   type="button"
@@ -335,8 +335,8 @@ export default function Login() {
                   onClick={() => setSelectedRole("hospital")}
                 >
                   <span style={{ fontSize: "1.4rem" }}>🏥</span>
-                  <strong>Hospital</strong>
-                  <small>Bed &amp; Admission Desk</small>
+                  <strong>{t("login.hospital") || "Hospital"}</strong>
+                  <small>{t("login.hospitalDesc") || "Bed & Admission Desk"}</small>
                 </button>
               </div>
 
@@ -703,7 +703,7 @@ export default function Login() {
         {mode === "login" && (
           <div className="evaluator-demo-box">
             <div className="evaluator-demo-title">
-              <span>⚡ Quick Demo 1-Click Login</span>
+              <span>⚡ {t("login.demoRoles") || "Quick Demo 1-Click Login"}</span>
               <span style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "none", fontWeight: "500" }}>Evaluator Sandbox</span>
             </div>
             <div className="evaluator-pill-grid">
@@ -714,7 +714,7 @@ export default function Login() {
                 disabled={loading}
               >
                 <span>🩺</span>
-                <span>Verified Doctor</span>
+                <span>{t("login.demoDoctor") || "Verified Doctor"}</span>
               </button>
               <button
                 type="button"
@@ -723,7 +723,7 @@ export default function Login() {
                 disabled={loading}
               >
                 <span>🏥</span>
-                <span>Hospital Desk</span>
+                <span>{t("login.demoHospital") || "Hospital Desk"}</span>
               </button>
               <button
                 type="button"
@@ -732,7 +732,7 @@ export default function Login() {
                 disabled={loading}
               >
                 <span>👤</span>
-                <span>Patient Portal</span>
+                <span>{t("login.demoPatient") || "Patient Portal"}</span>
               </button>
             </div>
           </div>

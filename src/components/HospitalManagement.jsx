@@ -634,9 +634,9 @@ export default function HospitalManagement({
             <span className="live-pulse-dot" />
             <span>Relief Laser Health · Infrastructure</span>
           </div>
-          <h2 className="hosp-main-title">Hospital Network &amp; Management</h2>
+          <h2 className="hosp-main-title">{t("hospital.title") || "Hospital Network & Management"}</h2>
           <p className="hosp-main-sub">
-            Real-time bed availability telemetry, specialty treatment routing, and hospital staff resource controls.
+            {t("hospital.subtitle") || "Real-time bed availability telemetry, specialty treatment routing, and hospital staff resource controls."}
           </p>
         </div>
 
@@ -649,7 +649,7 @@ export default function HospitalManagement({
             <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
               <path d="M2 11a1 1 0 011-1h2a1 1 0 011 1v5a1 1 0 01-1 1H3a1 1 0 01-1-1v-5zM8 7a1 1 0 011-1h2a1 1 0 011 1v9a1 1 0 01-1 1H9a1 1 0 01-1-1V7zM14 4a1 1 0 011-1h2a1 1 0 011 1v12a1 1 0 01-1 1h-2a1 1 0 01-1-1V4z" />
             </svg>
-            <span>Hospital Dashboard</span>
+            <span>{t("hospital.dashboard") || "Hospital Dashboard"}</span>
           </button>
 
           <button
@@ -661,7 +661,7 @@ export default function HospitalManagement({
               <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
               <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
             </svg>
-            <span>Incoming Referrals</span>
+            <span>{t("hospital.incoming") || "Incoming Referrals"}</span>
             {pendingIncomingCount > 0 && (
               <span className="tab-counter alert">{pendingIncomingCount}</span>
             )}
@@ -676,7 +676,7 @@ export default function HospitalManagement({
               <rect x="2" y="4" width="20" height="16" rx="2" />
               <path d="M6 8h4M6 12h4M6 16h4M14 8h4M14 12h4M14 16h4" />
             </svg>
-            <span>Live Bed Capacity</span>
+            <span>{t("hospital.capacity") || "Live Bed Capacity"}</span>
           </button>
 
           <button
@@ -687,7 +687,7 @@ export default function HospitalManagement({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" width="16" height="16">
               <path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
             </svg>
-            <span>Doctor Verification</span>
+            <span>{t("hospital.verification") || "Doctor Verification"}</span>
           </button>
 
           <button
@@ -700,7 +700,7 @@ export default function HospitalManagement({
               <path d="M9 21v-4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v4" />
               <path d="M10 9h4M12 7v4" />
             </svg>
-            <span>Hospital Profile</span>
+            <span>{t("hospital.profile") || "Hospital Profile"}</span>
           </button>
 
           <button
@@ -711,7 +711,7 @@ export default function HospitalManagement({
             <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
               <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
             </svg>
-            <span>Directory</span>
+            <span>{t("hospital.directory") || "Directory"}</span>
             <span className="tab-counter">{hospitals.length}</span>
           </button>
         </div>
