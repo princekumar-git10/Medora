@@ -221,6 +221,19 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
+  // Auto-route authenticated Doctor, Hospital, or Admin to their dedicated portal workspace
+  useEffect(() => {
+    if (activePage === "home" && (window.location.pathname === "/" || window.location.pathname === "")) {
+      if (isDoctor) {
+        handleNavigate("doctor_dashboard");
+      } else if (isHospital) {
+        handleNavigate("hospital_dashboard");
+      } else if (isAdmin) {
+        handleNavigate("admin_dashboard");
+      }
+    }
+  }, [isDoctor, isHospital, isAdmin]);
+
   async function handleFile(file) {
     setLoading(true);
     setError("");

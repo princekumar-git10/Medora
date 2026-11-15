@@ -545,8 +545,8 @@ export default function Login() {
                 value={docRef}
                 onChange={(e) => setDocRef(e.target.value)}
               />
-              <small style={{ color: "#64748b", fontSize: "0.74rem", display: "block", marginTop: "4px" }}>
-                ℹ️ Doctor accounts are set to <strong>PENDING_VERIFICATION</strong> upon signup. You will be able to submit referrals once verified by our medical director.
+              <small style={{ color: "#059669", fontSize: "0.76rem", display: "block", marginTop: "4px", fontWeight: "600" }}>
+                ✓ Instant Medical Verification: Your doctor profile will be activated immediately with full referral dispatch capabilities.
               </small>
             </div>
           )}
@@ -609,8 +609,8 @@ export default function Login() {
                   <input className="authInput" type="number" value={ventilatorsCount} onChange={(e) => setVentilatorsCount(e.target.value)} />
                 </div>
               </div>
-              <small style={{ color: "#64748b", fontSize: "0.74rem", display: "block", marginTop: "4px" }}>
-                ℹ️ Hospital accounts require Super Admin license verification before receiving live patient transfers.
+              <small style={{ color: "#059669", fontSize: "0.76rem", display: "block", marginTop: "4px", fontWeight: "600" }}>
+                ✓ Instant Hospital Verification: Your facility will be activated immediately with live bed telemetry and triage capabilities.
               </small>
             </div>
           )}

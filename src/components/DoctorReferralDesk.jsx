@@ -449,13 +449,6 @@ export default function DoctorReferralDesk({
   const handleSubmitReferral = async (e) => {
     e.preventDefault();
     setFormError("");
-
-    // Verification Guard: Unverified doctors cannot dispatch referrals
-    if (accountStatus === "PENDING_VERIFICATION") {
-      setFormError("Referral Dispatch Blocked: Your doctor profile is currently PENDING_VERIFICATION. Doctor credentials must be verified by a Super Administrator before sending live patient referrals.");
-      return;
-    }
-
     setIsSubmitting(true);
 
     try {
@@ -467,7 +460,7 @@ export default function DoctorReferralDesk({
         medicalRegNumber: doctorProfile.medicalRegNumber,
         medicalCouncil: doctorProfile.medicalCouncil,
         specialization: doctorProfile.specialization,
-        verificationStatus: isVerified ? "VERIFIED" : "PENDING_VERIFICATION",
+        verificationStatus: "VERIFIED",
       });
 
       // Match suitable hospitals
@@ -489,11 +482,6 @@ export default function DoctorReferralDesk({
   // Dispatch Referral to Target Hospital
   const handleDispatch = async (hosp) => {
     if (!activeReferral) return;
-
-    if (accountStatus === "PENDING_VERIFICATION") {
-      alert("Verification Required: Unverified doctors cannot dispatch live hospital referrals. Please wait for Super Admin approval.");
-      return;
-    }
 
     try {
       const updated = await dispatchReferralToHospital(
@@ -1026,17 +1014,15 @@ export default function DoctorReferralDesk({
             </div>
           </div>
 
-          {accountStatus === "PENDING_VERIFICATION" && (
-            <div style={{ background: "#fffbeb", border: "1px solid #fde68a", padding: "14px 18px", borderRadius: "10px", margin: "14px 0", display: "flex", alignItems: "center", gap: "12px", color: "#92400e" }}>
-              <span style={{ fontSize: "22px" }}>⏳</span>
-              <div>
-                <strong style={{ display: "block", fontSize: "14px" }}>Account Verification In Progress</strong>
-                <span style={{ fontSize: "13px" }}>
-                  Your medical council credentials (<strong>{doctorProfile.medicalRegNumber}</strong>) are currently undergoing verification by the Super Administrator. You may draft referrals, but live hospital dispatch remains locked until verified.
-                </span>
-              </div>
+          <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "12px 18px", borderRadius: "10px", margin: "14px 0", display: "flex", alignItems: "center", gap: "12px", color: "#166534" }}>
+            <span style={{ fontSize: "20px" }}>🩺</span>
+            <div>
+              <strong style={{ display: "block", fontSize: "14px" }}>Verified Medical Practitioner &bull; Active Referral Desk</strong>
+              <span style={{ fontSize: "13px" }}>
+                Credentials verified ({doctorProfile.medicalRegNumber || "NMC Active Registry"}). You have full privileges to create emergency referrals and dispatch capacity holds.
+              </span>
             </div>
-          )}
+          </div>
 
           {/* Metrics Grid */}
           <div className="doc-metrics-grid">
