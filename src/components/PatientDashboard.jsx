@@ -610,7 +610,7 @@ export default function PatientDashboard({
                   id="pat-lookup"
                   type="text"
                   className="dash-input"
-                  placeholder="Enter Referral ID (e.g. REF-RLH-2026-7782) or Patient ID or Phone"
+                  placeholder="Enter Referral ID (e.g. REF-RLH-2026-9124) or Patient ID or Phone"
                   value={lookupInput}
                   onChange={(e) => setLookupInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handlePatientLookup()}
