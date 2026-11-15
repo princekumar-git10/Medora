@@ -4,7 +4,7 @@ import { useLanguage } from "../context/LanguageContext";
 
 export default function Login() {
   const { t, lang, setLang, languages } = useLanguage();
-  const { login, signup, loginWithGoogle, signupWithGoogle, resetPassword, authError, setAuthError } = useAuth();
+  const { login, signup, loginWithGoogle, signupWithGoogle, resetPassword, authError, setAuthError, loginAsDemo } = useAuth();
 
   const [mode, setMode] = useState("login"); // "login" | "signup" | "forgot"
   const [selectedRole, setSelectedRole] = useState("patient"); // "patient" | "doctor" | "hospital"
@@ -122,69 +122,18 @@ export default function Login() {
     setLoading(true);
     try {
       if (demoRole === "doctor") {
-        await login("dr.sharma@medisync.ai", "DoctorPass@123");
+        sessionStorage.setItem("medora_demo_target", "doctor_dashboard");
       } else if (demoRole === "hospital") {
-        await login("emergency@fortis.med", "HospitalPass@123");
-      } else if (demoRole === "admin") {
-        await login("admin@medisync.ai", "AdminPass@123");
+        sessionStorage.setItem("medora_demo_target", "hospital_dashboard");
       } else {
-        await login("rahul.verma@gmail.com", "PatientPass@123");
+        sessionStorage.setItem("medora_demo_target", "patient_dashboard");
       }
-    } catch {
-      // If demo user does not exist in Firebase Auth yet, auto-signup
-      try {
-        const dummyEmail =
-          demoRole === "doctor"
-            ? "dr.sharma@medisync.ai"
-            : demoRole === "hospital"
-            ? "emergency@fortis.med"
-            : demoRole === "admin"
-            ? "admin@medisync.ai"
-            : "rahul.verma@gmail.com";
-        const dummyPass = "Demo123456!";
 
-        if (demoRole === "doctor") {
-          await signup("doctor", {
-            fullName: "Dr. Arvind Sharma",
-            email: dummyEmail,
-            password: dummyPass,
-            phone: "+91 98112 34567",
-            regNumber: "MCI-48291-DEL",
-            medicalCouncil: "Delhi Medical Council (DMC)",
-            specialization: "General & Laparoscopic Surgery",
-            affiliation: "Apollo Clinic & Daycare",
-            clinicAddress: "B-42, South Extension II, New Delhi",
-          });
-        } else if (demoRole === "hospital") {
-          await signup("hospital", {
-            hospitalName: "Fortis Escorts Heart & Multispeciality",
-            email: dummyEmail,
-            password: dummyPass,
-            phone: "+91 11 4713 5000",
-            regNumber: "HOSP-DEL-8921",
-            hospitalType: "Super-Speciality",
-            address: "Okhla Road, Sukhdev Vihar, New Delhi",
-            city: "New Delhi",
-            state: "Delhi",
-            pinCode: "110025",
-            authorizedRep: "Dr. V. Kapoor (Medical Director)",
-            generalBedsCount: "120",
-            icuBedsCount: "25",
-            ventilatorsCount: "10",
-          });
-        } else {
-          await signup("patient", {
-            fullName: demoRole === "admin" ? "System Super Admin" : "Rahul Verma",
-            email: dummyEmail,
-            password: dummyPass,
-            phone: "+91 98765 43210",
-            dob: "1988-06-15",
-            gender: "Male",
-          });
-        }
-      } catch (err2) {
-        setError(cleanError(err2));
+      if (loginAsDemo) {
+        await loginAsDemo(demoRole);
       }
+    } catch (err) {
+      console.warn("Demo login error:", err);
     } finally {
       setLoading(false);
     }
@@ -784,15 +733,6 @@ export default function Login() {
               >
                 <span>👤</span>
                 <span>Patient Portal</span>
-              </button>
-              <button
-                type="button"
-                className="evaluator-pill-btn"
-                onClick={() => handleQuickDemo("admin")}
-                disabled={loading}
-              >
-                <span>🛡️</span>
-                <span>Super Admin</span>
               </button>
             </div>
           </div>

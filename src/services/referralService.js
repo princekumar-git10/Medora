@@ -938,26 +938,30 @@ export async function executeHospitalReferralAction({
     };
 
     // Real-time role notifications (Doctor + Patient sanitized)
-    await dispatchNotification({
-      recipientRole: "doctor",
-      recipientId: referral.doctorId,
-      referralId,
-      eventType: "referral_accepted",
-      title: `Accepted by ${hospital.name}`,
-      message: `${hospital.name} (${staffName}) accepted referral ${referralId} for ${referral.patient?.name}.${authorizeCapacityHold ? ` Capacity hold active until ${new Date(holdDetails.expiresAt).toLocaleTimeString()}.` : ""}`,
-      requestedExternalChannels: ["email"],
-      isDemoData: referral.isDemoData,
-    });
-    await dispatchNotification({
-      recipientRole: "patient",
-      recipientId: referral.patient?.patientId || referralId,
-      referralId,
-      eventType: "referral_accepted_patient",
-      title: "Hospital Confirmed Your Referral",
-      message: `${hospital.name} has confirmed admission readiness for your referral ${referralId}. Open Patient Dashboard for directions & arrival instructions.`,
-      requestedExternalChannels: ["sms", "email", "whatsapp"],
-      isDemoData: referral.isDemoData,
-    });
+    try {
+      await dispatchNotification({
+        recipientRole: "doctor",
+        recipientId: referral.doctorId || "",
+        referralId,
+        eventType: "referral_accepted",
+        title: `Accepted by ${hospital.name}`,
+        message: `${hospital.name} (${staffName}) accepted referral ${referralId} for ${referral.patient?.name || "Patient"}.${authorizeCapacityHold ? ` Capacity hold active until ${new Date(holdDetails.expiresAt).toLocaleTimeString()}.` : ""}`,
+        requestedExternalChannels: ["email"],
+        isDemoData: referral.isDemoData,
+      });
+      await dispatchNotification({
+        recipientRole: "patient",
+        recipientId: referral.patient?.patientId || referralId,
+        referralId,
+        eventType: "referral_accepted_patient",
+        title: "Hospital Confirmed Your Referral",
+        message: `${hospital.name} has confirmed admission readiness for your referral ${referralId}. Open Patient Dashboard for directions & arrival instructions.`,
+        requestedExternalChannels: ["sms", "email", "whatsapp"],
+        isDemoData: referral.isDemoData,
+      });
+    } catch (notifErr) {
+      console.warn("Acceptance notification dispatch skipped:", notifErr?.message || notifErr);
+    }
   } 
 
   // 4. ACTION: REJECT
@@ -1046,26 +1050,30 @@ export async function executeHospitalReferralAction({
       ]
     };
 
-    await dispatchNotification({
-      recipientRole: "doctor",
-      recipientId: referral.doctorId,
-      referralId,
-      eventType: "referral_rejected",
-      title: `Referral Declined by ${hospital.name}`,
-      message: `${hospital.name} declined referral ${referralId} (${referral.patient?.name}). Reason: ${cleanReason}. Launch Alternative Hospital Matching to redirect without re-entry.`,
-      requestedExternalChannels: ["sms", "email"],
-      isDemoData: referral.isDemoData,
-    });
-    await dispatchNotification({
-      recipientRole: "patient",
-      recipientId: referral.patient?.patientId || referralId,
-      referralId,
-      eventType: "referral_rejected_patient",
-      title: "Matching Alternative Hospital",
-      message: `${hospital.name} could not accommodate referral ${referralId}. Your doctor is assigning an alternative accredited center.`,
-      requestedExternalChannels: ["sms", "whatsapp"],
-      isDemoData: referral.isDemoData,
-    });
+    try {
+      await dispatchNotification({
+        recipientRole: "doctor",
+        recipientId: referral.doctorId || "",
+        referralId,
+        eventType: "referral_rejected",
+        title: `Referral Declined by ${hospital.name}`,
+        message: `${hospital.name} declined referral ${referralId} (${referral.patient?.name || "Patient"}). Reason: ${cleanReason}. Launch Alternative Hospital Matching to redirect without re-entry.`,
+        requestedExternalChannels: ["sms", "email"],
+        isDemoData: referral.isDemoData,
+      });
+      await dispatchNotification({
+        recipientRole: "patient",
+        recipientId: referral.patient?.patientId || referralId,
+        referralId,
+        eventType: "referral_rejected_patient",
+        title: "Matching Alternative Hospital",
+        message: `${hospital.name} could not accommodate referral ${referralId}. Your doctor is assigning an alternative accredited center.`,
+        requestedExternalChannels: ["sms", "whatsapp"],
+        isDemoData: referral.isDemoData,
+      });
+    } catch (notifErr) {
+      console.warn("Rejection notification dispatch skipped:", notifErr?.message || notifErr);
+    }
   }
 
   // 5. ACTION: REQUEST MORE INFORMATION
@@ -1110,16 +1118,20 @@ export async function executeHospitalReferralAction({
       ]
     };
 
-    await dispatchNotification({
-      recipientRole: "doctor",
-      recipientId: referral.doctorId,
-      referralId,
-      eventType: "referral_info_requested",
-      title: `Info Requested by ${hospital.name}`,
-      message: `${hospital.name} (${staffName}) requested clarification for referral ${referralId}: "${infoText}".`,
-      requestedExternalChannels: ["email"],
-      isDemoData: referral.isDemoData,
-    });
+    try {
+      await dispatchNotification({
+        recipientRole: "doctor",
+        recipientId: referral.doctorId || "",
+        referralId,
+        eventType: "referral_info_requested",
+        title: `Info Requested by ${hospital.name}`,
+        message: `${hospital.name} (${staffName}) requested clarification for referral ${referralId}: "${infoText}".`,
+        requestedExternalChannels: ["email"],
+        isDemoData: referral.isDemoData,
+      });
+    } catch (notifErr) {
+      console.warn("Info request notification dispatch skipped:", notifErr?.message || notifErr);
+    }
   }
 
   // 6. Persist locally and sync

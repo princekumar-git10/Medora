@@ -3,7 +3,6 @@ import { useLanguage } from "../context/LanguageContext";
 import HospitalManagement from "./HospitalManagement";
 import DoctorReferralDesk from "./DoctorReferralDesk";
 import PatientDashboard from "./PatientDashboard";
-import SuperAdminDashboard from "./SuperAdminDashboard";
 import NotificationCenter from "./NotificationCenter";
 import {
   getReferrals,
@@ -95,13 +94,19 @@ export default function ReliefLaserHealth({ results = [], userEmail, onNavigate 
     if (typeof window !== "undefined" && window.history) {
       window.history.pushState({ subRoute: routeKey }, "", path);
     }
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   };
+
+  // Scroll to top when sub-route changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [subRoute]);
 
   // Handle browser back/forward buttons
   useEffect(() => {
     const handlePopState = () => {
       setSubRouteState(getInitialSubRoute());
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
@@ -163,16 +168,6 @@ export default function ReliefLaserHealth({ results = [], userEmail, onNavigate 
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="sub-icon">
           <path d="M9 11l3 3L22 4" />
           <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
-        </svg>
-      ),
-    },
-    {
-      id: "admin",
-      label: "Super Admin",
-      path: "/relief-laser-health/admin",
-      icon: (
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="sub-icon">
-          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
         </svg>
       ),
     },
@@ -407,12 +402,6 @@ export default function ReliefLaserHealth({ results = [], userEmail, onNavigate 
         </div>
       )}
 
-      {/* ── VIEW 6: Super Admin Dashboard (/relief-laser-health/admin) ── */}
-      {subRoute === "admin" && (
-        <div className="relief-subview-panel full-width">
-          <SuperAdminDashboard userEmail={userEmail} />
-        </div>
-      )}
 
       {/* ── VIEW 5: Live Referral Tracking (/relief-laser-health/referrals) ── */}
       {subRoute === "referrals" && (

@@ -4,17 +4,8 @@ import { getHospitals, subscribeToHospitals } from "../services/hospitalService.
 import { subscribeToNotifications, getNotificationsForRole } from "../services/notificationService.js";
 import { translatePatientGuideAI } from "../services/aiReferralService.js";
 import { useLanguage } from "../context/LanguageContext";
-
-/**
- * Patient Dashboard & Referral Tracking Module
- * Route: /relief-laser-health/patient
- *
- * Privacy:
- *  - Patients can only view their own referrals (matched by email, contact, or patientId).
- *  - Family access requires authorization (shared access code).
- *  - Never exposes private clinical reports or diagnosis to unauthorized viewers.
- *  - SMS/Notification content is sanitized — no clinical details.
- */
+import { useAuth } from "../context/AuthContext";
+import ResultCard from "./ResultCard.jsx";
 
 // Canonical timeline milestones in display order
 const TIMELINE_MILESTONES = [
@@ -44,17 +35,17 @@ const STATUS_CONFIG = {
   Escalated:              { label: "Emergency Coordination",    color: "#b91c1c", bg: "#fff1f2",  borderColor: "#fda4af" },
 };
 
-import { useAuth } from "../context/AuthContext";
-
 export default function PatientDashboard({ 
   userEmail,
   activeSubRoute = "dashboard",
   onSubRouteChange,
   results = [],
+  activeReportName = "",
+  loading: reportLoading = false,
   onFile,
   onNavigate
 }) {
-  const { t } = useLanguage();
+  const { t, tTestName, tStatus } = useLanguage();
   const { profile, user } = useAuth();
 
   const [activeTab, setActiveTabState] = useState(() => {
@@ -76,6 +67,11 @@ export default function PatientDashboard({
     else if (activeSubRoute === "dashboard") setActiveTabState("dashboard");
   }, [activeSubRoute]);
 
+  // Always scroll to top when patient switches tabs
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [activeTab]);
+
   // Authentication & access state
   const [accessMode, setAccessMode] = useState(() => (userEmail || user ? "patient" : "unverified")); // "unverified" | "patient" | "family"
   const [lookupInput, setLookupInput] = useState("");
@@ -93,6 +89,34 @@ export default function PatientDashboard({
   // Notifications panel
   const [showNotifications, setShowNotifications] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+
+  // Lab Report Filters & Search
+  const [reportSearch, setReportSearch] = useState("");
+  const [reportFilter, setReportFilter] = useState("all"); // "all" | "attention" | "normal"
+
+  const normalResults = useMemo(() => (results || []).filter((r) => r.status === "normal"), [results]);
+  const flaggedResults = useMemo(() => (results || []).filter((r) => r.status !== "normal"), [results]);
+  const urgentResults = useMemo(() => (results || []).filter((r) => r.needsAttention), [results]);
+
+  const filteredReportResults = useMemo(() => {
+    let list = results || [];
+    if (reportFilter === "attention") {
+      list = flaggedResults;
+    } else if (reportFilter === "normal") {
+      list = normalResults;
+    }
+    if (reportSearch.trim()) {
+      const q = reportSearch.toLowerCase().trim();
+      list = list.filter((r) => {
+        const rawName = (r.test?.name || "").toLowerCase();
+        const translatedName = (tTestName ? tTestName(r.test?.name) : "").toLowerCase();
+        return rawName.includes(q) || translatedName.includes(q);
+      });
+    }
+    return [...list].sort((a, b) => {
+      return (b.needsAttention - a.needsAttention) || ((b.status !== "normal") - (a.status !== "normal"));
+    });
+  }, [results, reportFilter, reportSearch, flaggedResults, normalResults, tTestName]);
 
   // Multilingual EN / HI AI Assistance
   const [aiGuideLang, setAiGuideLang] = useState("en");
@@ -783,15 +807,6 @@ export default function PatientDashboard({
                 Upload your blood test or hospital lab report PDF for immediate AI interpretation and risk score calculation.
               </p>
             </div>
-            {onNavigate && (
-              <button
-                type="button"
-                className="relief-primary-btn compact"
-                onClick={() => onNavigate("report")}
-              >
-                Open Full Report Analyzer →
-              </button>
-            )}
           </div>
 
           <div className="modern-upload-card">
@@ -832,6 +847,14 @@ export default function PatientDashboard({
               <span className="dropzone-btn">Select PDF Report</span>
             </label>
 
+            {reportLoading && (
+              <div style={{ marginTop: 18, padding: "20px", textAlign: "center", background: "#f8fafc", borderRadius: 12, border: "1px dashed #cbd5e1" }}>
+                <div style={{ display: "inline-block", width: 28, height: 28, border: "3px solid #cbd5e1", borderTopColor: "#0f5c63", borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
+                <h4 style={{ margin: "10px 0 4px", color: "#0f172a" }}>Analyzing PDF Lab Report with Medora AI...</h4>
+                <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b" }}>Extracting clinical biomarkers, checking physiological ranges, and generating patient-friendly insights.</p>
+              </div>
+            )}
+
             {results.length > 0 && (
               <div className="report-analyzed-badge-card">
                 <div className="rabc-left">
@@ -845,14 +868,195 @@ export default function PatientDashboard({
                   <button
                     type="button"
                     className="relief-primary-btn compact"
-                    onClick={() => onNavigate("report")}
+                    onClick={() => {
+                      const el = document.getElementById("patient-report-results-anchor");
+                      if (el) el.scrollIntoView({ behavior: "smooth" });
+                    }}
                   >
-                    View Full Report Analysis →
+                    View Report Analysis Below ↓
                   </button>
                 )}
               </div>
             )}
           </div>
+
+          {/* ── Complete Patient-Friendly Report Analysis Section ── */}
+          {results.length > 0 && (
+            <div className="patient-report-analysis-wrap" id="patient-report-results-anchor">
+              {/* Report Header & Quick Actions */}
+              <div className="report-meta-bar">
+                <div className="report-meta-title-group">
+                  <span className="report-file-icon">📑</span>
+                  <div>
+                    <h3>{activeReportName || "Laboratory Diagnostic Report"}</h3>
+                    <p>
+                      Encrypted &amp; securely stored in Patient Health Vault · {results.length} parameters analyzed
+                    </p>
+                  </div>
+                </div>
+
+                <div className="report-nav-actions">
+                  {onNavigate && (
+                    <>
+                      <button
+                        type="button"
+                        className="report-action-btn-sm primary"
+                        onClick={() => onNavigate("risk")}
+                        title="Calculate deterioration early warning score"
+                      >
+                        ⚡ Deterioration AI Risk
+                      </button>
+                      <button
+                        type="button"
+                        className="report-action-btn-sm"
+                        onClick={() => onNavigate("cost")}
+                        title="Compare treatment & hospital admission costs"
+                      >
+                        🏥 Compare Hospital Costs
+                      </button>
+                      <button
+                        type="button"
+                        className="report-action-btn-sm"
+                        onClick={() => onNavigate("home")}
+                        title="Ask the Medora AI assistant about this report"
+                      >
+                        💬 Ask Medora AI
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Summary Stats Grid */}
+              <div className="report-stats-grid">
+                <div className="report-stat-card stat-total">
+                  <div className="report-stat-icon-wrap">📊</div>
+                  <div className="report-stat-text">
+                    <strong>{results.length}</strong>
+                    <span>Total Biomarkers</span>
+                  </div>
+                </div>
+                <div className="report-stat-card stat-normal">
+                  <div className="report-stat-icon-wrap">✓</div>
+                  <div className="report-stat-text">
+                    <strong>{normalResults.length}</strong>
+                    <span>Within Normal Range</span>
+                  </div>
+                </div>
+                <div className="report-stat-card stat-flagged">
+                  <div className="report-stat-icon-wrap">⚠️</div>
+                  <div className="report-stat-text">
+                    <strong>{flaggedResults.length}</strong>
+                    <span>Outside Reference Limits</span>
+                  </div>
+                </div>
+                <div className="report-stat-card stat-urgent">
+                  <div className="report-stat-icon-wrap">🚨</div>
+                  <div className="report-stat-text">
+                    <strong>{urgentResults.length}</strong>
+                    <span>Priority Physician Review</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Priority Review Alert (if any markers deviate significantly) */}
+              {urgentResults.length > 0 && (
+                <div className="report-urgent-banner">
+                  <div className="rub-header">
+                    <span className="rub-icon">🚨</span>
+                    <strong>Priority Physician Review Recommended</strong>
+                  </div>
+                  <p className="rub-desc">
+                    {urgentResults.length} biomarker{urgentResults.length > 1 ? "s" : ""} deviate{urgentResults.length === 1 ? "s" : ""} significantly from standard physiological reference limits. Please review these with your doctor or clinician:
+                  </p>
+                  <div className="rub-pills">
+                    {urgentResults.map((r, idx) => (
+                      <span key={idx} className="rub-pill">
+                        {tTestName(r.test?.name)}: {r.value} {r.test?.unit} ({tStatus(r.status).toUpperCase()}, {r.deviation}% deviation)
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Filter and Search Bar */}
+              <div className="report-filter-bar">
+                <div className="report-search-box">
+                  <span className="report-search-icon">🔍</span>
+                  <input
+                    type="text"
+                    className="report-search-input"
+                    placeholder="Search test by name (e.g. Hemoglobin, Glucose, TSH, Platelets)..."
+                    value={reportSearch}
+                    onChange={(e) => setReportSearch(e.target.value)}
+                  />
+                </div>
+
+                <div className="report-filter-chips">
+                  <button
+                    type="button"
+                    className={`report-filter-chip ${reportFilter === "all" ? "active" : ""}`}
+                    onClick={() => setReportFilter("all")}
+                  >
+                    All Biomarkers ({results.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`report-filter-chip ${reportFilter === "attention" ? "active" : ""}`}
+                    onClick={() => setReportFilter("attention")}
+                  >
+                    Outside Normal Range ({flaggedResults.length})
+                  </button>
+                  <button
+                    type="button"
+                    className={`report-filter-chip ${reportFilter === "normal" ? "active" : ""}`}
+                    onClick={() => setReportFilter("normal")}
+                  >
+                    Normal ({normalResults.length})
+                  </button>
+                </div>
+              </div>
+
+              {/* Patient Educational Tip */}
+              <div className="report-tip-note">
+                <span>💡</span>
+                <span>
+                  <strong>Tip for patients:</strong> Click on any biomarker card below to view plain-language explanations, why it might be high or low, listen with audio speech, and view specific questions to ask your doctor.
+                </span>
+              </div>
+
+              {/* Biomarkers Cards List */}
+              {filteredReportResults.length === 0 ? (
+                <div className="report-empty-results">
+                  <p>No tests match your search "{reportSearch}".</p>
+                  <button
+                    type="button"
+                    className="report-action-btn-sm"
+                    onClick={() => {
+                      setReportSearch("");
+                      setReportFilter("all");
+                    }}
+                  >
+                    Reset Filter
+                  </button>
+                </div>
+              ) : (
+                <div className="report-results-list">
+                  {filteredReportResults.map((r, idx) => (
+                    <ResultCard key={r.test?.name || idx} r={r} />
+                  ))}
+                </div>
+              )}
+
+              {/* Medical Disclaimer */}
+              <div className="report-disclaimer-box">
+                <span>🛡️</span>
+                <p>
+                  <strong>Patient Clinical Notice:</strong> Medora AI interpretations are designed to empower patients with transparent health literacy using established clinical reference ranges. AI analyses do not constitute a definitive medical diagnosis. Always consult a qualified licensed physician for medical decision-making and prescription management.
+                </p>
+              </div>
+            </div>
+          )}
         </section>
       )}
 

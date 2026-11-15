@@ -18,6 +18,26 @@ import { collection, doc, setDoc, getDocs } from "firebase/firestore";
 const STORAGE_KEY = "relief_laser_notifications_v1";
 const FIRESTORE_COLLECTION = "relief_notifications";
 
+/**
+ * Recursively strip undefined values so Firestore serialization never throws
+ */
+export function sanitizeForFirestore(val) {
+  if (val === undefined) return null;
+  if (val === null || typeof val !== "object") return val;
+  if (Array.isArray(val)) {
+    return val
+      .map((item) => sanitizeForFirestore(item))
+      .filter((item) => item !== undefined);
+  }
+  const result = {};
+  for (const [key, value] of Object.entries(val)) {
+    if (value !== undefined) {
+      result[key] = sanitizeForFirestore(value);
+    }
+  }
+  return result;
+}
+
 // Explicit provider configuration check (honest status — never pretends configured)
 export function getProviderConfigStatus() {
   const smsConfigured =
@@ -126,29 +146,32 @@ export async function dispatchNotification({
           queuedAt: nowIso,
         };
       }
-      return {
+      const delivery = {
         channel: ch,
         sent: false,
         status: "skipped_provider_not_configured",
         reason: `${cfg?.label || ch} — delivered in-app only; external provider not configured.`,
-        sanitizedDraft: recipientRole === "patient" ? sanitizedExternalPreview : undefined,
       };
+      if (recipientRole === "patient" && sanitizedExternalPreview) {
+        delivery.sanitizedDraft = sanitizedExternalPreview;
+      }
+      return delivery;
     }),
   ];
 
   const record = {
     id,
-    recipientRole,
+    recipientRole: recipientRole || "patient",
     recipientId: String(recipientId || "").toLowerCase(),
-    referralId,
-    eventType,
-    title,
-    message,
+    referralId: referralId || "",
+    eventType: eventType || "referral_update",
+    title: title || "Medora Notification",
+    message: message || "",
     isDemoData: Boolean(isDemoData),
     read: false,
     createdAt: nowIso,
     channelDeliveries,
-    metadata,
+    metadata: metadata || {},
   };
 
   const existing = getLocalNotifications();
@@ -157,7 +180,14 @@ export async function dispatchNotification({
 
   // Non-blocking Firestore sync if available
   if (db && typeof window !== "undefined" && window.navigator?.onLine !== false) {
-    setDoc(doc(db, FIRESTORE_COLLECTION, id), record).catch(() => {});
+    try {
+      const cleanRecord = sanitizeForFirestore(record);
+      setDoc(doc(db, FIRESTORE_COLLECTION, id), cleanRecord).catch((err) => {
+        console.warn("Firestore notification sync skipped:", err?.message || err);
+      });
+    } catch (prepErr) {
+      console.warn("Firestore notification payload prep skipped:", prepErr?.message || prepErr);
+    }
   }
 
   return record;

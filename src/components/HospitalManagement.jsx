@@ -57,6 +57,11 @@ export default function HospitalManagement({
     else if (activeSubRoute === "dashboard") setActiveTabState("dashboard");
   }, [activeSubRoute]);
 
+  // Always scroll to top when hospital desk switches tabs
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [activeTab]);
+
   // Doctor Verification lookup state
   const [docSearchQuery, setDocSearchQuery] = useState("");
   const [docLookupResult, setDocLookupResult] = useState(null);
@@ -1197,181 +1202,21 @@ export default function HospitalManagement({
             </div>
           </div>
 
-          {/* ── LIVE CAPACITY ADJUSTMENT FORM ── */}
-          <div className="dash-section-card capacity-update-card">
-            <div className="section-title-wrap">
-              <div>
-                <h3 className="section-heading">Update Live Capacity Telemetry</h3>
-                <p className="section-subtext">
-                  Modify current bed counts and referral statistics. Real-time validation prevents available capacity from exceeding configured capacity.
-                </p>
-              </div>
+          {/* ── LIVE CAPACITY SHORTCUT CARD ── */}
+          <div className="dash-section-card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "1.25rem 1.5rem", marginTop: "1rem" }}>
+            <div>
+              <h4 style={{ margin: "0 0 4px", fontSize: "1.05rem", fontWeight: "700", color: "#0f172a" }}>Live Bed Capacity &amp; Telemetry Controls</h4>
+              <p style={{ margin: 0, fontSize: "0.85rem", color: "#64748b" }}>
+                Update live bed counts, ICU availability, emergency triage bays, and referral counters in the dedicated Live Bed Capacity tab.
+              </p>
             </div>
-
-            {capacityError && (
-              <div className="dash-alert error">
-                <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-                <span>{capacityError}</span>
-              </div>
-            )}
-
-            {capacitySuccess && (
-              <div className="dash-alert success">
-                <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-                <span>{capacitySuccess}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleCapacitySubmit} className="capacity-form-grid">
-              <div className="form-group">
-                <label htmlFor="avail-beds-input">
-                  Available General Beds * 
-                  <span className="field-hint">(Max: {selectedHospital.generalBedCapacity})</span>
-                </label>
-                <input
-                  id="avail-beds-input"
-                  type="number"
-                  min="0"
-                  max={selectedHospital.generalBedCapacity}
-                  value={capacityForm.availableBeds}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, availableBeds: e.target.value })}
-                  className="dash-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="occ-beds-input">
-                  Occupied General Beds *
-                  <span className="field-hint">(Max: {selectedHospital.generalBedCapacity})</span>
-                </label>
-                <input
-                  id="occ-beds-input"
-                  type="number"
-                  min="0"
-                  max={selectedHospital.generalBedCapacity}
-                  value={capacityForm.occupiedBeds}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, occupiedBeds: e.target.value })}
-                  className="dash-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="icu-beds-input">
-                  Available ICU Beds *
-                  <span className="field-hint">(Max: {selectedHospital.icuBedCapacity})</span>
-                </label>
-                <input
-                  id="icu-beds-input"
-                  type="number"
-                  min="0"
-                  max={selectedHospital.icuBedCapacity}
-                  value={capacityForm.availableIcuBeds}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, availableIcuBeds: e.target.value })}
-                  className="dash-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="emerg-beds-input">
-                  Available Emergency Beds *
-                  <span className="field-hint">
-                    (Max: {selectedHospital.emergencyFacilities?.bedCapacity || 10})
-                  </span>
-                </label>
-                <input
-                  id="emerg-beds-input"
-                  type="number"
-                  min="0"
-                  max={selectedHospital.emergencyFacilities?.bedCapacity || 10}
-                  value={capacityForm.availableEmergencyBeds}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, availableEmergencyBeds: e.target.value })}
-                  className="dash-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="active-ref-input">Active Referral Requests</label>
-                <input
-                  id="active-ref-input"
-                  type="number"
-                  min="0"
-                  value={capacityForm.activeReferrals}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, activeReferrals: e.target.value })}
-                  className="dash-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="acc-ref-input">Accepted Referrals</label>
-                <input
-                  id="acc-ref-input"
-                  type="number"
-                  min="0"
-                  value={capacityForm.acceptedReferrals}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, acceptedReferrals: e.target.value })}
-                  className="dash-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="rej-ref-input">Rejected Referrals</label>
-                <input
-                  id="rej-ref-input"
-                  type="number"
-                  min="0"
-                  value={capacityForm.rejectedReferrals}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, rejectedReferrals: e.target.value })}
-                  className="dash-input"
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="staff-name-input">Updater Staff Name *</label>
-                <input
-                  id="staff-name-input"
-                  type="text"
-                  value={capacityForm.staffName}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, staffName: e.target.value })}
-                  placeholder="e.g. Dr. A. Sharma / Charge Nurse"
-                  className="dash-input"
-                  required
-                />
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="staff-email-input">Authorized Staff Email *</label>
-                <input
-                  id="staff-email-input"
-                  type="email"
-                  value={capacityForm.staffEmail}
-                  onChange={(e) => setCapacityForm({ ...capacityForm, staffEmail: e.target.value })}
-                  placeholder="staff@hospital.med"
-                  className="dash-input"
-                  required
-                />
-              </div>
-
-              <div className="form-action-full">
-                <button
-                  type="submit"
-                  disabled={updatingCapacity}
-                  className="relief-primary-btn"
-                >
-                  {updatingCapacity ? "Syncing with Database..." : "Save & Confirm Availability"}
-                </button>
-                <span className="submit-disclaimer">
-                  Timestamp and updater email will be recorded. Availability will be marked as "Hospital Confirmed".
-                </span>
-              </div>
-            </form>
+            <button
+              type="button"
+              className="relief-primary-btn compact"
+              onClick={() => setActiveTab("capacity")}
+            >
+              Open Live Bed Capacity →
+            </button>
           </div>
         </section>
       )}
@@ -2175,64 +2020,180 @@ export default function HospitalManagement({
             </div>
           </div>
 
-          {/* Capacity Update Form */}
-          <div className="dash-capacity-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "12px", padding: "1.5rem" }}>
-            <h3 className="section-heading" style={{ marginBottom: "4px" }}>Broadcast Real-Time Capacity Update</h3>
-            <p style={{ color: "#64748b", fontSize: "13px", margin: "0 0 1.25rem" }}>
-              Publish verified bed availability across the network to receive prioritized laser surgery and acute care referrals.
-            </p>
+          {/* ── LIVE CAPACITY TELEMETRY FORM (Full Authoritative Hub) ── */}
+          <div className="dash-section-card capacity-update-card" style={{ background: "#ffffff", border: "1px solid #e2e8f0", borderRadius: "14px", padding: "1.75rem" }}>
+            <div className="section-title-wrap" style={{ marginBottom: "1.25rem" }}>
+              <div>
+                <h3 className="section-heading" style={{ fontSize: "1.3rem", fontWeight: "700", color: "#0f172a" }}>Update Live Capacity Telemetry</h3>
+                <p className="section-subtext" style={{ color: "#64748b", margin: "4px 0 0", fontSize: "0.9rem" }}>
+                  Modify current bed counts and referral statistics. Real-time validation prevents available capacity from exceeding configured capacity.
+                </p>
+              </div>
+            </div>
 
-            {capacitySuccess && <div className="dash-alert success" style={{ marginBottom: "1rem" }}>{capacitySuccess}</div>}
-            {capacityError && <div className="dash-alert error" style={{ marginBottom: "1rem" }}>{capacityError}</div>}
+            {capacityError && (
+              <div className="dash-alert error" style={{ marginBottom: "1rem" }}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+                <span>{capacityError}</span>
+              </div>
+            )}
 
-            <form onSubmit={handleCapacitySubmit}>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "16px", marginBottom: "1.25rem" }}>
-                <div>
-                  <label className="field-lbl">Available General Beds</label>
-                  <input
-                    type="number"
-                    className="dash-input"
-                    value={capacityForm.availableBeds}
-                    onChange={(e) => setCapacityForm(prev => ({ ...prev, availableBeds: Number(e.target.value) }))}
-                  />
-                </div>
-                <div>
-                  <label className="field-lbl">Occupied General Beds</label>
-                  <input
-                    type="number"
-                    className="dash-input"
-                    value={capacityForm.occupiedBeds}
-                    onChange={(e) => setCapacityForm(prev => ({ ...prev, occupiedBeds: Number(e.target.value) }))}
-                  />
-                </div>
-                <div>
-                  <label className="field-lbl">Available ICU Beds</label>
-                  <input
-                    type="number"
-                    className="dash-input"
-                    value={capacityForm.availableIcuBeds}
-                    onChange={(e) => setCapacityForm(prev => ({ ...prev, availableIcuBeds: Number(e.target.value) }))}
-                  />
-                </div>
-                <div>
-                  <label className="field-lbl">Emergency Bays Ready</label>
-                  <input
-                    type="number"
-                    className="dash-input"
-                    value={capacityForm.availableEmergencyBeds}
-                    onChange={(e) => setCapacityForm(prev => ({ ...prev, availableEmergencyBeds: Number(e.target.value) }))}
-                  />
-                </div>
+            {capacitySuccess && (
+              <div className="dash-alert success" style={{ marginBottom: "1rem" }}>
+                <svg viewBox="0 0 20 20" fill="currentColor" width="20" height="20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+                <span>{capacitySuccess}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCapacitySubmit} className="capacity-form-grid">
+              <div className="form-group">
+                <label htmlFor="avail-beds-input-cap">
+                  Available General Beds * 
+                  <span className="field-hint" style={{ fontSize: "12px", color: "#64748b", marginLeft: "4px" }}>(Max: {selectedHospital.generalBedCapacity})</span>
+                </label>
+                <input
+                  id="avail-beds-input-cap"
+                  type="number"
+                  min="0"
+                  max={selectedHospital.generalBedCapacity}
+                  value={capacityForm.availableBeds}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, availableBeds: e.target.value })}
+                  className="dash-input"
+                  required
+                />
               </div>
 
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: "10px" }}>
+              <div className="form-group">
+                <label htmlFor="occ-beds-input-cap">
+                  Occupied General Beds *
+                  <span className="field-hint" style={{ fontSize: "12px", color: "#64748b", marginLeft: "4px" }}>(Max: {selectedHospital.generalBedCapacity})</span>
+                </label>
+                <input
+                  id="occ-beds-input-cap"
+                  type="number"
+                  min="0"
+                  max={selectedHospital.generalBedCapacity}
+                  value={capacityForm.occupiedBeds}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, occupiedBeds: e.target.value })}
+                  className="dash-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="icu-beds-input-cap">
+                  Available ICU Beds *
+                  <span className="field-hint" style={{ fontSize: "12px", color: "#64748b", marginLeft: "4px" }}>(Max: {selectedHospital.icuBedCapacity})</span>
+                </label>
+                <input
+                  id="icu-beds-input-cap"
+                  type="number"
+                  min="0"
+                  max={selectedHospital.icuBedCapacity}
+                  value={capacityForm.availableIcuBeds}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, availableIcuBeds: e.target.value })}
+                  className="dash-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="emerg-beds-input-cap">
+                  Available Emergency Beds *
+                  <span className="field-hint" style={{ fontSize: "12px", color: "#64748b", marginLeft: "4px" }}>
+                    (Max: {selectedHospital.emergencyFacilities?.bedCapacity || 10})
+                  </span>
+                </label>
+                <input
+                  id="emerg-beds-input-cap"
+                  type="number"
+                  min="0"
+                  max={selectedHospital.emergencyFacilities?.bedCapacity || 10}
+                  value={capacityForm.availableEmergencyBeds}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, availableEmergencyBeds: e.target.value })}
+                  className="dash-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="active-ref-input-cap">Active Referral Requests</label>
+                <input
+                  id="active-ref-input-cap"
+                  type="number"
+                  min="0"
+                  value={capacityForm.activeReferrals}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, activeReferrals: e.target.value })}
+                  className="dash-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="acc-ref-input-cap">Accepted Referrals</label>
+                <input
+                  id="acc-ref-input-cap"
+                  type="number"
+                  min="0"
+                  value={capacityForm.acceptedReferrals}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, acceptedReferrals: e.target.value })}
+                  className="dash-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="rej-ref-input-cap">Rejected Referrals</label>
+                <input
+                  id="rej-ref-input-cap"
+                  type="number"
+                  min="0"
+                  value={capacityForm.rejectedReferrals}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, rejectedReferrals: e.target.value })}
+                  className="dash-input"
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="staff-name-input-cap">Updater Staff Name *</label>
+                <input
+                  id="staff-name-input-cap"
+                  type="text"
+                  value={capacityForm.staffName}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, staffName: e.target.value })}
+                  placeholder="e.g. Dr. Arvind Mehta (Chief of Surgery)"
+                  className="dash-input"
+                  required
+                />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="staff-email-input-cap">Authorized Staff Email *</label>
+                <input
+                  id="staff-email-input-cap"
+                  type="email"
+                  value={capacityForm.staffEmail}
+                  onChange={(e) => setCapacityForm({ ...capacityForm, staffEmail: e.target.value })}
+                  placeholder="staff@hospital.med"
+                  className="dash-input"
+                  required
+                />
+              </div>
+
+              <div className="form-action-full" style={{ gridColumn: "1 / -1", marginTop: "1rem" }}>
                 <button
                   type="submit"
-                  className="relief-primary-btn"
                   disabled={updatingCapacity}
+                  className="relief-primary-btn"
+                  style={{ width: "100%", padding: "14px 20px", fontSize: "1rem", fontWeight: "700" }}
                 >
-                  {updatingCapacity ? "Broadcasting Telemetry..." : "✓ Confirm & Broadcast Live Capacity"}
+                  {updatingCapacity ? "Syncing with Database..." : "Save & Confirm Availability"}
                 </button>
+                <span className="submit-disclaimer" style={{ display: "block", marginTop: "8px", fontSize: "12px", color: "#64748b", fontStyle: "italic" }}>
+                  Timestamp and updater email will be recorded. Availability will be marked as "Hospital Confirmed".
+                </span>
               </div>
             </form>
           </div>

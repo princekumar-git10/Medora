@@ -55,6 +55,11 @@ export default function DoctorReferralDesk({
     else if (activeSubRoute === "referrals" || activeSubRoute === "dashboard") setActiveViewState("dashboard");
   }, [activeSubRoute]);
 
+  // Always scroll to top when doctor switches views or tabs
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [activeView]);
+
   // Referrals state
   const [referrals, setReferrals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -654,102 +659,135 @@ export default function DoctorReferralDesk({
       ═════════════════════════════════════════════════════════════════════ */}
       {activeView === "patients" && (
         <section className="doc-dashboard-view">
-          <div className="doc-desk-header" style={{ marginBottom: "1rem" }}>
-            <div>
-              <h2 className="section-heading">My Patients Directory</h2>
-              <p className="doc-main-sub">
+          <div className="doc-desk-header" style={{ marginBottom: "1.25rem", alignItems: "center" }}>
+            <div style={{ flex: "1 1 450px" }}>
+              <h2 className="section-heading" style={{ margin: "0 0 4px" }}>My Patients Directory</h2>
+              <p className="doc-main-sub" style={{ margin: 0 }}>
                 Comprehensive roster of patients referred through your clinic desk. Track clinical outcomes, repeat visits, and active admissions.
               </p>
             </div>
             <button
               type="button"
               className="relief-primary-btn compact"
+              style={{ display: "inline-flex", alignItems: "center", gap: "8px", flexShrink: 0 }}
               onClick={() => setShowAddPatientModal(true)}
             >
               <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16">
                 <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
               </svg>
-              <span>+ Register New Patient</span>
+              <span>Register New Patient</span>
             </button>
           </div>
 
-          {/* Search bar */}
-          <div style={{ marginBottom: "1.25rem", display: "flex", gap: "12px" }}>
-            <div style={{ flex: 1, position: "relative" }}>
-              <input
-                type="text"
-                className="dash-input"
-                placeholder="Search patients by name, Patient ID, phone, or location..."
-                value={patientSearchQuery}
-                onChange={(e) => setPatientSearchQuery(e.target.value)}
-                style={{ width: "100%", paddingLeft: "36px" }}
-              />
-              <span style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }}>🔍</span>
-            </div>
-          </div>
+          <div className="doc-history-card patients-directory-card">
+            {/* Search & Filter Toolbar */}
+            <div className="patients-toolbar">
+              <div className="patients-search-box">
+                <span className="patients-search-icon">🔍</span>
+                <input
+                  type="text"
+                  className="patients-search-input"
+                  placeholder="Search patients by name, Patient ID, phone, or location..."
+                  value={patientSearchQuery}
+                  onChange={(e) => setPatientSearchQuery(e.target.value)}
+                />
+                {patientSearchQuery && (
+                  <button
+                    type="button"
+                    className="patients-search-clear"
+                    onClick={() => setPatientSearchQuery("")}
+                    title="Clear search query"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
 
-          {filteredPatients.length === 0 ? (
-            <div className="dash-empty-state" style={{ textAlign: "center", padding: "3rem 1rem", background: "#f8fafc", borderRadius: "12px", border: "1px dashed #cbd5e1" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>👥</div>
-              <h3 style={{ margin: "0 0 0.5rem", color: "#1e293b" }}>No patients found</h3>
-              <p style={{ color: "#64748b", margin: "0 0 1rem" }}>
-                {patientSearchQuery ? "No patients matched your search criteria." : "You haven't registered or referred any patients yet."}
-              </p>
-              <button
-                type="button"
-                className="relief-primary-btn compact"
-                onClick={() => setShowAddPatientModal(true)}
-              >
-                + Register First Patient
-              </button>
+              <div className="patients-count-badge">
+                <span className="live-pulse-dot" />
+                <span>
+                  Showing <strong>{filteredPatients.length}</strong> of <strong>{uniquePatients.length}</strong> Patients
+                </span>
+              </div>
             </div>
-          ) : (
-            <div className="dash-table-card">
-              <div className="dash-table-responsive">
-                <table className="dash-table">
+
+            {filteredPatients.length === 0 ? (
+              <div className="dash-empty-state" style={{ textAlign: "center", padding: "3rem 1rem", background: "#f8fafc", borderRadius: "12px", border: "1px dashed #cbd5e1" }}>
+                <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>👥</div>
+                <h3 style={{ margin: "0 0 0.5rem", color: "#1e293b" }}>No patients found</h3>
+                <p style={{ color: "#64748b", margin: "0 0 1rem" }}>
+                  {patientSearchQuery ? "No patients matched your search criteria." : "You haven't registered or referred any patients yet."}
+                </p>
+                <button
+                  type="button"
+                  className="relief-primary-btn compact"
+                  onClick={() => setShowAddPatientModal(true)}
+                >
+                  Register First Patient
+                </button>
+              </div>
+            ) : (
+              <div className="table-responsive">
+                <table className="doc-referral-table patients-table">
                   <thead>
                     <tr>
                       <th>Patient Details</th>
                       <th>Age / Gender</th>
-                      <th>Contact & Location</th>
+                      <th>Contact &amp; Location</th>
                       <th>Emergency Contact</th>
                       <th>Referral Activity</th>
-                      <th>Actions</th>
+                      <th style={{ textAlign: "right" }}>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredPatients.map((p, idx) => (
-                      <tr key={p.patientId || idx}>
+                      <tr key={p.patientId || idx} className="patient-row-hover">
                         <td>
-                          <strong>{p.name}</strong>
-                          <span className="dash-td-sub" style={{ display: "block", color: "#0284c7" }}>{p.patientId}</span>
+                          <div className="patient-name-wrap">
+                            <strong className="patient-name">{p.name}</strong>
+                            <span className="patient-id-badge">{p.patientId}</span>
+                          </div>
                         </td>
                         <td>
-                          <span>{p.age} yrs</span>
-                          <span className="dash-td-sub" style={{ display: "block" }}>{p.gender}</span>
+                          <div className="patient-demographics">
+                            <strong>{p.age} yrs</strong>
+                            <span className="patient-gender-chip">{p.gender}</span>
+                          </div>
                         </td>
                         <td>
-                          <span>{p.contact}</span>
-                          <span className="dash-td-sub" style={{ display: "block" }}>📍 {p.location}</span>
+                          <div className="patient-contact-cell">
+                            <span className="patient-phone">{p.contact}</span>
+                            <span className="patient-location">📍 {p.location}</span>
+                          </div>
                         </td>
                         <td>
-                          <span style={{ color: p.emergencyContact ? "#0f172a" : "#94a3b8" }}>
-                            {p.emergencyContact || "Not recorded"}
-                          </span>
+                          {p.emergencyContact ? (
+                            <div className="patient-emergency-contact">
+                              <span>{p.emergencyContact}</span>
+                            </div>
+                          ) : (
+                            <span style={{ color: "#94a3b8", fontSize: "0.82rem", fontStyle: "italic" }}>
+                              Not recorded
+                            </span>
+                          )}
                         </td>
                         <td>
-                          <span className="count-pill ok" style={{ fontSize: "11px", fontWeight: "600" }}>
-                            {p.totalReferrals} referral(s)
-                          </span>
-                          <span className="dash-td-sub" style={{ display: "block" }}>
-                            Latest: <strong>{p.latestStatus}</strong>
-                          </span>
+                          <div className="patient-referral-status-cell">
+                            <span className="count-pill ok">
+                              {p.totalReferrals} referral{p.totalReferrals !== 1 ? "s" : ""}
+                            </span>
+                            <div className="patient-latest-status">
+                              <span className="status-label">Latest:</span>
+                              <span className={`status-pill-table ${(p.latestStatus || "").toLowerCase()}`}>
+                                {p.latestStatus || "None"}
+                              </span>
+                            </div>
+                          </div>
                         </td>
-                        <td>
+                        <td style={{ textAlign: "right" }}>
                           <button
                             type="button"
-                            className="dash-action-btn primary"
-                            style={{ fontSize: "12px", padding: "6px 12px" }}
+                            className="view-btn-table primary"
                             onClick={() => {
                               setFormData(prev => ({
                                 ...prev,
@@ -772,8 +810,8 @@ export default function DoctorReferralDesk({
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
           {/* Add Patient Modal */}
           {showAddPatientModal && (

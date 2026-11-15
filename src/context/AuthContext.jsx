@@ -18,10 +18,93 @@ import {
 
 const AuthContext = createContext(null);
 
+// Evaluator Sandbox Profiles for Instant 1-Click Demo Login
+const DEMO_PROFILES = {
+  doctor: {
+    uid: "demo-doctor-dr-sharma",
+    email: "dr.sharma@medisync.ai",
+    displayName: "Dr. Arvind Sharma",
+    role: "doctor",
+    accountStatus: "ACTIVE",
+    verificationStatus: "VERIFIED",
+    fullName: "Dr. Arvind Sharma",
+    phone: "+91 98112 34567",
+    regNumber: "MCI-48291-DEL",
+    medicalCouncil: "Delhi Medical Council (DMC)",
+    specialization: "General & Laparoscopic Surgery",
+    affiliation: "Apollo Clinic & Daycare",
+    clinicAddress: "B-42, South Extension II, New Delhi",
+  },
+  hospital: {
+    uid: "demo-hospital-fortis",
+    email: "emergency@fortis.med",
+    displayName: "Fortis Escorts Hospital",
+    role: "hospital",
+    accountStatus: "ACTIVE",
+    verificationStatus: "VERIFIED",
+    hospitalName: "Fortis Escorts Heart & Multispeciality",
+    phone: "+91 11 4713 5000",
+    regNumber: "HOSP-DEL-8921",
+    hospitalType: "Super-Speciality",
+    address: "Okhla Road, Sukhdev Vihar, New Delhi",
+    city: "New Delhi",
+    state: "Delhi",
+    pinCode: "110025",
+    generalBedsCount: 120,
+    icuBedsCount: 25,
+    ventilatorsCount: 10,
+  },
+  admin: {
+    uid: "demo-admin-system",
+    email: "admin@medisync.ai",
+    displayName: "System Super Admin",
+    role: "admin",
+    accountStatus: "ACTIVE",
+    verificationStatus: "VERIFIED",
+    fullName: "System Super Admin",
+    phone: "+91 98765 00000",
+  },
+  patient: {
+    uid: "demo-patient-rahul",
+    email: "rahul.verma@gmail.com",
+    displayName: "Rahul Verma",
+    role: "patient",
+    accountStatus: "ACTIVE",
+    verificationStatus: "VERIFIED",
+    fullName: "Rahul Verma",
+    phone: "+91 98765 43210",
+    dob: "1988-06-15",
+    gender: "Male",
+  },
+};
+
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(undefined); // undefined = loading
-  const [profile, setProfile] = useState(null);
-  const [profileLoading, setProfileLoading] = useState(true);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("medora_demo_user");
+      return saved ? JSON.parse(saved) : undefined;
+    } catch {
+      return undefined;
+    }
+  }); // undefined = loading
+
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = sessionStorage.getItem("medora_demo_profile");
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [profileLoading, setProfileLoading] = useState(() => {
+    try {
+      return !sessionStorage.getItem("medora_demo_user");
+    } catch {
+      return true;
+    }
+  });
+
   const [authError, setAuthError] = useState("");
 
   const isAuthActionInProgress = useRef(false);
@@ -41,6 +124,18 @@ export function AuthProvider({ children }) {
     const unsubscribeAuth = onAuthStateChanged(auth, async (firebaseUser) => {
       clearTimeout(safetyTimer);
       if (!active) return;
+
+      // If active demo evaluator session exists, maintain it seamlessly
+      try {
+        const savedDemo = sessionStorage.getItem("medora_demo_user");
+        const savedProf = sessionStorage.getItem("medora_demo_profile");
+        if (savedDemo && savedProf) {
+          setUser(JSON.parse(savedDemo));
+          setProfile(JSON.parse(savedProf));
+          setProfileLoading(false);
+          return;
+        }
+      } catch {}
 
       // If an explicit login or signup flow is actively handling the auth transition, let it finish
       if (isAuthActionInProgress.current) {
@@ -92,9 +187,9 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  // Realtime subscription to current user's profile document
+  // Realtime subscription to current user's profile document (skipped for local demo accounts)
   useEffect(() => {
-    if (!user?.uid) return;
+    if (!user?.uid || user.uid.startsWith("demo-")) return;
     const unsubProfile = subscribeToUserProfile(user.uid, (updatedProfile) => {
       if (updatedProfile) {
         setProfile((prev) => ({ ...prev, ...updatedProfile }));
@@ -255,13 +350,48 @@ export function AuthProvider({ children }) {
 
   // Logout
   const logout = async () => {
+    try {
+      sessionStorage.removeItem("medora_demo_user");
+      sessionStorage.removeItem("medora_demo_profile");
+      sessionStorage.removeItem("medora_demo_target");
+    } catch {}
     setUser(null);
     setProfile(null);
-    return signOut(auth);
+    return signOut(auth).catch(() => {});
+  };
+
+  // Instant 1-Click Demo Login for Sandbox Evaluators
+  const loginAsDemo = async (targetRole = "doctor") => {
+    isAuthActionInProgress.current = true;
+    setAuthError("");
+    const demoProf = DEMO_PROFILES[targetRole] || DEMO_PROFILES.doctor;
+    const demoUser = {
+      uid: demoProf.uid,
+      email: demoProf.email,
+      displayName: demoProf.displayName || demoProf.fullName,
+    };
+
+    try {
+      sessionStorage.setItem("medora_demo_user", JSON.stringify(demoUser));
+      sessionStorage.setItem("medora_demo_profile", JSON.stringify(demoProf));
+    } catch (e) {
+      console.warn("Could not write demo session to storage:", e);
+    }
+
+    setUser(demoUser);
+    setProfile(demoProf);
+    setProfileLoading(false);
+    isAuthActionInProgress.current = false;
+    return { user: demoUser, profile: demoProf };
   };
 
   // Fast Demo Role Switcher for instant evaluation & testing
   const switchDemoRole = async (targetRole) => {
+    const targetProf = DEMO_PROFILES[targetRole];
+    if (targetProf) {
+      await loginAsDemo(targetRole);
+      return;
+    }
     if (!user) return;
     const updated = {
       ...profile,
@@ -295,6 +425,7 @@ export function AuthProvider({ children }) {
     resetPassword,
     logout,
     switchDemoRole,
+    loginAsDemo,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

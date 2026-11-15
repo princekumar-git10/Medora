@@ -24,7 +24,7 @@ import { useAuth } from "./context/AuthContext";
 import "./App.css";
 
 export default function App() {
-  const { role, isDoctor, isHospital, isPatient, isAdmin } = useAuth();
+  const { user, profile, role, isDoctor, isHospital, isPatient, isAdmin, logout } = useAuth();
   const { t } = useLanguage();
 
   const parseCurrentRoute = () => {
@@ -160,14 +160,8 @@ export default function App() {
       targetPage = "relief";
       targetPath = "/relief-laser-health";
     } else if (pageKey === "report") {
-      if (isPatient) {
-        targetPage = "patient";
-        targetSub = "reports";
-        targetPath = "/patient/reports";
-      } else {
-        targetPage = "report";
-        targetPath = "/report";
-      }
+      targetPage = "report";
+      targetPath = "/report";
     } else if (pageKey === "risk") {
       targetPage = "risk";
       targetPath = "/risk";
@@ -208,31 +202,52 @@ export default function App() {
     if (typeof window !== "undefined" && window.history) {
       window.history.pushState({ page: targetPage, subRoute: targetSub }, "", targetPath);
     }
-    window.scrollTo({ top: 0, behavior: "instant" });
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   };
+
+  // Prevent browser from restoring scrolled-down positions and ensure clean top-of-page load
+  useEffect(() => {
+    if (typeof window !== "undefined" && "scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, []);
+
+  // Always scroll to top immediately whenever activePage or subRoute changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [activePage, subRoute]);
 
   useEffect(() => {
     const onPopState = () => {
       const parsed = parseCurrentRoute();
       setActivePage(parsed.page);
       setSubRoute(parsed.subRoute);
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
 
-  // Auto-route authenticated Doctor, Hospital, or Admin to their dedicated portal workspace
+  // Auto-route authenticated Doctor, Hospital, Admin, or Patient demo target to their dedicated portal workspace
   useEffect(() => {
+    try {
+      const demoTarget = sessionStorage.getItem("medora_demo_target");
+      if (demoTarget) {
+        sessionStorage.removeItem("medora_demo_target");
+        handleNavigate(demoTarget);
+        return;
+      }
+    } catch {}
+
     if (activePage === "home" && (window.location.pathname === "/" || window.location.pathname === "")) {
       if (isDoctor) {
         handleNavigate("doctor_dashboard");
       } else if (isHospital) {
         handleNavigate("hospital_dashboard");
-      } else if (isAdmin) {
-        handleNavigate("admin_dashboard");
       }
     }
-  }, [isDoctor, isHospital, isAdmin]);
+  }, [isDoctor, isHospital, isPatient]);
 
   async function handleFile(file) {
     setLoading(true);
@@ -275,14 +290,31 @@ export default function App() {
     }
   }
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+    try {
+      sessionStorage.clear();
+      localStorage.removeItem("medora_active_tab");
+      localStorage.removeItem("medora_active_report");
+    } catch {}
+    handleNavigate("home");
+    if (typeof window !== "undefined" && window.location.pathname !== "/") {
+      window.history.pushState(null, "", "/");
+    }
+  };
+
   return (
     <div className="app">
       {/* ── Unique ECG Heartbeat Pulse Navbar ── */}
       <PulseNav
         activePage={activePage}
         onNavigate={handleNavigate}
-        userEmail={auth.currentUser?.email}
-        onLogout={() => signOut(auth)}
+        userEmail={user?.email || profile?.email || auth.currentUser?.email}
+        onLogout={handleLogout}
         resultsCount={results.length}
         riskScore={results.length > 0 ? computeRisk(results).score : undefined}
       />
@@ -336,6 +368,8 @@ export default function App() {
             activeSubRoute={subRoute}
             onSubRouteChange={(sub) => handleNavigate("patient", sub)}
             results={results}
+            activeReportName={activeReportName}
+            loading={loading}
             onFile={handleFile}
             onNavigate={handleNavigate}
           />

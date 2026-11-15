@@ -59,6 +59,11 @@ export default function SuperAdminDashboard({
     else if (activeSubRoute === "dashboard") setActiveTabState("dashboard");
   }, [activeSubRoute]);
 
+  // Always scroll to top when super admin switches tabs
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+  }, [activeTab]);
+
   const [hospFilter, setHospFilter] = useState("all");
   const [refFilter, setRefFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
